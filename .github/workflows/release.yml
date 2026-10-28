@@ -52,7 +52,7 @@ jobs:
           cd target/${{ matrix.target }}/release
           Compress-Archive -Path ${{ matrix.binary_name }} -DestinationPath ../../../${{ matrix.asset_name }}
       - name: Publish or Update GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: Sayn ${{ env.RELEASE_TAG }}
