@@ -7,7 +7,6 @@
 
 # IDE and editor
 .idea/
-.vscode/
 *.swp
 *.swo
 *~
@@ -17,8 +16,6 @@ __pycache__/
 *.py[cod]
 
 # Environment and secrets
-.env
-.env.*
 !.env.example
 *.pem
 *.key
@@ -45,3 +42,11 @@ COMMANDS.md
 AGENTS.md
 CLAUDE.md
 .versionrule
+
+# Upstream analysis checkout
+vendor/
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
+config.bat
