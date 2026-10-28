@@ -105,6 +105,16 @@ pub fn execute(
         plan.target.to_string().cyan(),
         plan.framework.to_string().cyan()
     );
+    let active_model = sayn_hermes_models::ModelCatalog::get_active_model();
+    let is_nous_auth = sayn_hermes_auth::NousAuthManager::load_auth_state().ok().flatten().is_some();
+    let provider_name = if is_nous_auth {
+        "Nous Portal (Authenticated)"
+    } else if std::env::var("SAYN_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok() {
+        "BYOK (Environment key)"
+    } else {
+        "Integrated Engine"
+    };
+    println!("  Model:      {} ({})", active_model.cyan(), provider_name.dimmed());
     println!("  Routes:     {}", plan.routes.len());
     println!("  Components: {}", plan.components.len());
     println!("  Output:     {}", config.output.root.display());

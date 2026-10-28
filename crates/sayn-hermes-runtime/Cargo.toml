@@ -1,0 +1,18 @@
+[package]
+name = "sayn-hermes-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Hermes Agent runtime management and process supervision for Sayn"
+
+[dependencies]
+sayn-core = { path = "../sayn-core" }
+sayn-hermes-auth = { path = "../sayn-hermes-auth" }
+sayn-hermes-models = { path = "../sayn-hermes-models" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+colored.workspace = true
+tempfile.workspace = true

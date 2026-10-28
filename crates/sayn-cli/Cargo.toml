@@ -21,6 +21,9 @@ sayn-providers = { path = "../sayn-providers" }
 sayn-state = { path = "../sayn-state" }
 sayn-planner = { path = "../sayn-planner" }
 sayn-executor = { path = "../sayn-executor" }
+sayn-hermes-auth = { path = "../sayn-hermes-auth" }
+sayn-hermes-models = { path = "../sayn-hermes-models" }
+sayn-hermes-runtime = { path = "../sayn-hermes-runtime" }
 clap.workspace = true
 colored.workspace = true
 anyhow.workspace = true

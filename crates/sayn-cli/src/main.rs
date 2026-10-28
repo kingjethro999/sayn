@@ -190,4 +190,20 @@ mod tests {
         let cli_prov = Cli::try_parse_from(["sayn", "provider", "list"]);
         assert!(cli_prov.is_ok());
     }
+
+    #[test]
+    fn test_cli_auth_and_model_commands() {
+        let cli_auth = Cli::try_parse_from(["sayn", "auth", "nous", "--no-browser"]);
+        assert!(cli_auth.is_ok());
+
+        let cli_model_list = Cli::try_parse_from(["sayn", "model", "list", "--free"]);
+        assert!(cli_model_list.is_ok());
+
+        let cli_model_use = Cli::try_parse_from(["sayn", "model", "use", "hermes-3-llama-3.1-405b"]);
+        assert!(cli_model_use.is_ok());
+
+        let cli_app = Cli::try_parse_from(["sayn", "app", "dev"]);
+        assert!(cli_app.is_ok());
+    }
 }
+

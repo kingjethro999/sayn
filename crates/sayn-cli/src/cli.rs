@@ -192,9 +192,20 @@ pub struct AuthArgs {
 
 #[derive(Subcommand, Debug, PartialEq)]
 pub enum AuthSubcommand {
+    #[command(about = "Log in using official Nous Portal OAuth device-code flow")]
+    Nous {
+        #[arg(long, help = "Optional custom Nous Portal URL")]
+        portal_url: Option<String>,
+        #[arg(long, help = "Do not open browser automatically")]
+        no_browser: bool,
+    },
+    #[command(about = "Log in to Sayn Cloud or configure provider credentials")]
     Login,
+    #[command(about = "Log out and clear active credentials")]
     Logout,
+    #[command(about = "Show current authentication status")]
     Status,
+    #[command(about = "Display active access token")]
     Token,
 }
 
@@ -206,8 +217,27 @@ pub struct ModelArgs {
 
 #[derive(Subcommand, Debug, PartialEq)]
 pub enum ModelSubcommand {
-    List,
-    Select { name: String },
+    #[command(about = "List available models")]
+    List {
+        #[arg(long, help = "Show only free tier eligible models")]
+        free: bool,
+        #[arg(long, help = "Show only paid / subscription models")]
+        paid: bool,
+        #[arg(long, help = "Force refresh model catalog from remote provider")]
+        refresh: bool,
+    },
+    #[command(about = "Select and set active model by identifier")]
+    Use {
+        #[arg(help = "Model identifier to use (e.g. hermes-3-llama-3.1-405b)")]
+        model_id: String,
+    },
+    #[command(about = "Select active model (alias for 'use')")]
+    Select {
+        #[arg(help = "Model name to select")]
+        name: String,
+    },
+    #[command(about = "Show currently active model")]
+    Current,
 }
 
 #[derive(Args, Debug, PartialEq)]
