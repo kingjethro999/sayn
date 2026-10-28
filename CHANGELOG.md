@@ -5,6 +5,14 @@ All notable changes to the **Sayn** project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and follows Sayn's commit-driven version rollover rules.
 
+## [0.0.2] - 2026-10-28
+
+### Added
+- Formatter golden tests and Unicode idempotence verification in `sayn-formatter`.
+- Path traversal and directory escape security tests in `sayn-security`.
+- Scaffolding integration tests for `sayn create`, `sayn init`, and non-empty directory conflict detection in `sayn-project`.
+- Repository topic tags on GitHub.
+
 ## [0.0.1] - 2026-10-28
 
 ### Added

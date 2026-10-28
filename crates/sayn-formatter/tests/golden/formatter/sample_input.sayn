@@ -1,0 +1,19 @@
+Create a modern developer portfolio.    
+
+Goal:   
+Build a responsive website with light and dark mode.   
+
+Pages:  
+* Home page with introduction.   
+* Projects page with gallery.   
+* Contact page.  
+
+```tsx
+export function Profile() {
+    return <div>Hello world</div>;
+}
+```
+
+Integrations:
+- GitHub API for public repos.
+- Formspree for contact messages.
