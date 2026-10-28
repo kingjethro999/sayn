@@ -19,6 +19,8 @@ sayn-project = { path = "../sayn-project" }
 sayn-ir = { path = "../sayn-ir" }
 sayn-providers = { path = "../sayn-providers" }
 sayn-state = { path = "../sayn-state" }
+sayn-planner = { path = "../sayn-planner" }
+sayn-executor = { path = "../sayn-executor" }
 clap.workspace = true
 colored.workspace = true
 anyhow.workspace = true
