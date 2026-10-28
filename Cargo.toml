@@ -29,7 +29,7 @@ toml = "0.8"
 thiserror = "2"
 anyhow = "1"
 uuid = { version = "1", features = ["v4"] }
-sha2 = "0.10"
+sha2 = "0.11"
 hex = "0.4"
 walkdir = "2"
 colored = "3"
