@@ -5,6 +5,15 @@ All notable changes to the **Sayn** project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and follows Sayn's commit-driven version rollover rules.
 
+## [0.0.3] - 2026-10-28
+
+### Added
+- `sayn-providers` crate: `Provider` abstraction trait, deterministic `MockProvider`, and OpenAI-compatible BYOK provider with authentication checks.
+- Comprehensive `install.sh` installer for Linux and macOS with automated dependency checks (Git, Rust, Node.js).
+- Windows PowerShell installer (`install.ps1`) for seamless cross-platform installation.
+- Release workflow publishing multi-platform binaries on every commit to `main`.
+- Installed `sayn` binary into user PATH (`~/.local/bin/sayn` and `~/.cargo/bin/sayn`).
+
 ## [0.0.2] - 2026-10-28
 
 ### Added

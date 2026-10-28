@@ -1,0 +1,15 @@
+[package]
+name = "sayn-providers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "AI provider abstractions and BYOK integrations for Sayn"
+
+[dependencies]
+sayn-core = { path = "../sayn-core" }
+sayn-ir = { path = "../sayn-ir" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true

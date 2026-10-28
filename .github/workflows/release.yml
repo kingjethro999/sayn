@@ -2,6 +2,7 @@ name: Release
 
 on:
   push:
+    branches: [main]
     tags:
       - 'v*'
 
@@ -29,6 +30,11 @@ jobs:
             asset_name: sayn-windows-x86_64.zip
     steps:
       - uses: actions/checkout@v4
+      - name: Determine Release Tag
+        shell: bash
+        run: |
+          VER="$(cat VERSION | tr -d '[:space:]')"
+          echo "RELEASE_TAG=v${VER}" >> $GITHUB_ENV
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -45,9 +51,12 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           Compress-Archive -Path ${{ matrix.binary_name }} -DestinationPath ../../../${{ matrix.asset_name }}
-      - name: Upload Release Asset
+      - name: Publish or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Sayn ${{ env.RELEASE_TAG }}
           files: ${{ matrix.asset_name }}
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
