@@ -46,24 +46,30 @@
 - [x] Add template registry foundation
 - [x] Add scaffolding integration tests
 
-## Milestone 4: Planning and Generation Engine ⬜
-- [ ] Define IR types for generation plan
-- [ ] Implement `sayn plan` command
-- [ ] Implement provider abstraction trait
-- [ ] Implement mock provider for tests
-- [ ] Implement BYOK OpenAI-compatible provider
-- [ ] Implement `sayn craft` with auto check+plan
-- [ ] Implement file operation validation
-- [ ] Implement Next.js target adapter
-- [ ] Implement generation state/checkpoints
-- [ ] Add end-to-end tests with mock provider
+## Milestone 4: Planning and Generation Engine ✅
+- [x] Define IR types for generation plan (sayn-ir)
+- [x] Implement `sayn plan` command
+- [x] Implement provider abstraction trait (sayn-providers)
+- [x] Implement mock provider for deterministic offline testing
+- [x] Implement BYOK OpenAI-compatible provider
+- [x] Implement `sayn craft` with auto check+plan
+- [x] Implement file operation validation (sayn-security)
+- [x] Implement Next.js target adapter
+- [x] Implement generation state/checkpoints
+- [x] Add end-to-end tests with mock provider
 
-## Milestone 5: Development Runtime ⬜
-- [ ] Implement dev server orchestration
-- [ ] Implement `sayn build` with real Next.js build
-- [ ] Implement execution checkpoints and resume
-- [ ] Implement `sayn status`
-- [ ] Add incremental regeneration
+## Milestone 5: Development Runtime and State Management ✅
+- [x] Implement state management crate `sayn-state` (manifests, snapshots, export, clean)
+- [x] Implement `sayn snapshot` and `sayn rollback`
+- [x] Implement `sayn export` for clean deployable output
+- [x] Implement `sayn clean` for safe cache removal
+- [x] Implement `sayn watch` instruction monitoring
+- [x] Implement `sayn fix` repair engine
+- [x] Implement governance commands: `sayn permissions`, `sayn whoami`, `sayn logout`, `sayn provider`
+- [x] Implement `sayn build` production workflow
+- [x] Implement execution checkpoints and resume
+- [x] Implement `sayn status`
+- [x] Add incremental regeneration (SHA-256 manifests)
 
 ## Implementation Order
 Execute milestones sequentially. Each must compile and pass tests before proceeding.

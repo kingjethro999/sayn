@@ -122,13 +122,50 @@ pub fn execute(
     );
     let gen_root = root.join(&config.output.root);
 
-    // Generate real Next.js application workspace
-    generate_nextjs_application(&root, &gen_root, &config, &parsed_docs)?;
-    println!(
-        "  {} Materialized Next.js project in {}",
-        "✔".green(),
-        gen_root.display()
-    );
+    // Compute current source hashes
+    let mut current_source_hashes = std::collections::HashMap::new();
+    for f in &files {
+        let rel = f
+            .strip_prefix(&root)
+            .unwrap_or(f)
+            .to_string_lossy()
+            .replace('\\', "/");
+        if let Ok(hash) = sayn_state::Manifest::compute_file_hash(f) {
+            current_source_hashes.insert(rel, hash);
+        }
+    }
+
+    let existing_manifest = sayn_state::Manifest::load(&root).ok().flatten();
+    let is_up_to_date = existing_manifest
+        .as_ref()
+        .map(|m| m.is_up_to_date(&current_source_hashes) && gen_root.join("package.json").exists())
+        .unwrap_or(false);
+
+    if is_up_to_date && args.action.as_deref() != Some("force") {
+        println!(
+            "  {} Instruction files unchanged. Reusing verified generated code in {}.",
+            "✦".cyan().bold(),
+            gen_root.display()
+        );
+    } else {
+        // Generate real Next.js application workspace
+        generate_nextjs_application(&root, &gen_root, &config, &parsed_docs)?;
+        println!(
+            "  {} Materialized Next.js project in {}",
+            "✔".green(),
+            gen_root.display()
+        );
+
+        // Update and save manifest
+        let mut new_manifest =
+            sayn_state::Manifest::new(&config.sayn.project_id, &config.sayn.template_version);
+        new_manifest.source_hashes = current_source_hashes;
+        if let Ok(gen_hashes) = sayn_state::Manifest::scan_directory_hashes(&root, &gen_root, None)
+        {
+            new_manifest.generated_hashes = gen_hashes;
+        }
+        let _ = new_manifest.save(&root);
+    }
 
     // Save checkpoint
     let checkpoint_dir = root.join(".sayn/checkpoints");

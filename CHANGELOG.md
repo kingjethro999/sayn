@@ -5,6 +5,14 @@ All notable changes to the **Sayn** project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and follows Sayn's commit-driven version rollover rules.
 
+## [0.0.5] - 2026-10-28
+
+### Added
+- `sayn-state` crate implementing manifest hashing (`manifest.json`), snapshots (`sayn snapshot` & `sayn rollback`), clean deployable application export (`sayn export`), and safe cache cleanup (`sayn clean`).
+- Incremental compilation in `sayn craft`: hashes instruction sources with SHA-256 and reuses verified generated output when `.sayn` files are unchanged.
+- Expanded CLI commands per `COMMANDS.md` specification: `sayn watch`, `sayn fix`, `sayn snapshot`, `sayn rollback`, `sayn export`, `sayn clean`, `sayn permissions`, `sayn whoami`, `sayn logout`, `sayn provider`.
+- Comprehensive CLI unit tests and automated test coverage across all new subcommands.
+
 ## [0.0.4] - 2026-10-28
 
 ### Fixed

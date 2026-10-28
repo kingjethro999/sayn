@@ -1,0 +1,22 @@
+[package]
+name = "sayn-state"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "State management, manifests, snapshots, and cache for Sayn"
+
+[dependencies]
+sayn-core = { path = "../sayn-core" }
+sayn-security = { path = "../sayn-security" }
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+sha2.workspace = true
+hex.workspace = true
+walkdir.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

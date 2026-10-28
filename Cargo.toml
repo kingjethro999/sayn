@@ -9,10 +9,11 @@ members = [
     "crates/sayn-ir",
     "crates/sayn-security",
     "crates/sayn-providers",
+    "crates/sayn-state",
 ]
 
 [workspace.package]
-version = "0.0.4"
+version = "0.0.5"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/kingjethro999/sayn"

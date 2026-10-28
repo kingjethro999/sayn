@@ -467,7 +467,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-cli"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -477,8 +477,10 @@ dependencies = [
  "sayn-formatter",
  "sayn-ir",
  "sayn-project",
+ "sayn-providers",
  "sayn-security",
  "sayn-source",
+ "sayn-state",
  "serde",
  "serde_json",
  "thiserror",
@@ -487,7 +489,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-core"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "chrono",
  "serde",
@@ -498,7 +500,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-formatter"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "sayn-core",
  "sayn-source",
@@ -508,7 +510,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-ir"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "sayn-core",
  "serde",
@@ -518,7 +520,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-project"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "sayn-core",
  "sayn-ir",
@@ -535,7 +537,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-providers"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "anyhow",
  "sayn-core",
@@ -547,7 +549,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-security"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "sayn-core",
  "serde",
@@ -557,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-source"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "hex",
  "sayn-core",
@@ -566,6 +568,23 @@ dependencies = [
  "sha2",
  "tempfile",
  "thiserror",
+ "walkdir",
+]
+
+[[package]]
+name = "sayn-state"
+version = "0.0.4"
+dependencies = [
+ "chrono",
+ "hex",
+ "sayn-core",
+ "sayn-security",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror",
+ "uuid",
  "walkdir",
 ]
 

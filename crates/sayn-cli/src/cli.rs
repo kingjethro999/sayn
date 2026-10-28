@@ -65,6 +65,36 @@ pub enum Commands {
 
     #[command(about = "View or modify Sayn configuration")]
     Config(ConfigArgs),
+
+    #[command(about = "Monitor .sayn files for changes and automatically regenerate")]
+    Watch(WatchArgs),
+
+    #[command(about = "Repair generated application errors")]
+    Fix(FixArgs),
+
+    #[command(about = "Create a restorable checkpoint of the generated application")]
+    Snapshot(SnapshotArgs),
+
+    #[command(about = "Restore a previous generated application checkpoint")]
+    Rollback(RollbackArgs),
+
+    #[command(about = "Export a clean, deployable copy of generated source")]
+    Export(ExportArgs),
+
+    #[command(about = "Remove temporary build files and caches safely")]
+    Clean(CleanArgs),
+
+    #[command(about = "Inspect Sayn capability permissions")]
+    Permissions(PermissionsArgs),
+
+    #[command(about = "Show authenticated user and active provider details")]
+    Whoami(WhoamiArgs),
+
+    #[command(about = "Clear active authentication and provider credentials")]
+    Logout(LogoutArgs),
+
+    #[command(about = "Manage AI model providers")]
+    Provider(ProviderArgs),
 }
 
 #[derive(Args, Debug, PartialEq)]
@@ -188,4 +218,100 @@ pub enum ConfigSubcommand {
     Get { key: String },
     Set { key: String, value: String },
     List,
+}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct WatchArgs {
+    #[arg(long, help = "Require approval before regenerating on change")]
+    pub manual: bool,
+
+    #[arg(long, help = "Automatically regenerate on change within limits")]
+    pub auto: bool,
+
+    #[arg(long, help = "Maximum budget in dollars for the watch session")]
+    pub budget: Option<f64>,
+}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct FixArgs {
+    #[arg(long, help = "Simulate repair without modifying files")]
+    pub dry_run: bool,
+
+    #[arg(long, help = "Focus specifically on dependency resolution")]
+    pub dependency: bool,
+
+    #[arg(long, help = "Focus specifically on TypeScript compilation errors")]
+    pub types: bool,
+
+    #[arg(long, help = "Focus on production build failure repair")]
+    pub build: bool,
+}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct SnapshotArgs {
+    #[arg(help = "Optional snapshot ID (auto-generated if omitted)")]
+    pub id: Option<String>,
+}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct RollbackArgs {
+    #[arg(help = "Snapshot ID to restore")]
+    pub id: String,
+}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct ExportArgs {
+    #[arg(short, long, help = "Target export directory (defaults to ./dist)")]
+    pub output: Option<PathBuf>,
+}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct CleanArgs {
+    #[arg(long, help = "Clean all disposable caches and logs")]
+    pub all: bool,
+}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct PermissionsArgs {
+    #[arg(help = "Action: list, reset, revoke (defaults to list)")]
+    pub action: Option<String>,
+}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct WhoamiArgs {}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct LogoutArgs {
+    #[arg(long, help = "Specific provider to log out of (sayn, nous, custom)")]
+    pub provider: Option<String>,
+
+    #[arg(long, help = "Clear credentials for all providers")]
+    pub all_providers: bool,
+}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct ProviderArgs {
+    #[command(subcommand)]
+    pub action: Option<ProviderSubcommand>,
+}
+
+#[derive(Subcommand, Debug, PartialEq)]
+pub enum ProviderSubcommand {
+    List,
+    Add {
+        #[arg(help = "Provider name (e.g., openai, anthropic, gemini)")]
+        name: Option<String>,
+    },
+    Use {
+        #[arg(help = "Provider name to set as active")]
+        name: String,
+    },
+    Test {
+        #[arg(help = "Provider name to test (defaults to active provider)")]
+        name: Option<String>,
+    },
+    Remove {
+        #[arg(help = "Provider name to remove")]
+        name: String,
+    },
 }
