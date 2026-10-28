@@ -5,6 +5,12 @@ All notable changes to the **Sayn** project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and follows Sayn's commit-driven version rollover rules.
 
+## [0.0.4] - 2026-10-28
+
+### Fixed
+- Fixed cross-platform CRLF line ending discrepancy in formatter golden test on Windows CI runners.
+- Added `.gitattributes` to enforce consistent LF line endings across all platforms for `.sayn`, `.rs`, and `.toml` files.
+
 ## [0.0.3] - 2026-10-28
 
 ### Added

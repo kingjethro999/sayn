@@ -6,7 +6,8 @@ fn test_golden_formatter_sample() {
     let input = fs::read_to_string("tests/golden/formatter/sample_input.sayn")
         .expect("Failed to read sample_input.sayn");
     let expected = fs::read_to_string("tests/golden/formatter/sample_expected.sayn")
-        .expect("Failed to read sample_expected.sayn");
+        .expect("Failed to read sample_expected.sayn")
+        .replace("\r\n", "\n");
 
     let formatted = format_source(&input);
     assert_eq!(
