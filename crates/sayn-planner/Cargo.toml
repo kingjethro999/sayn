@@ -1,0 +1,21 @@
+[package]
+name = "sayn-planner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Change analysis, prompt construction, task decomposition, and planning for Sayn"
+
+[dependencies]
+sayn-core = { path = "../sayn-core" }
+sayn-source = { path = "../sayn-source" }
+sayn-ir = { path = "../sayn-ir" }
+sayn-project = { path = "../sayn-project" }
+sayn-state = { path = "../sayn-state" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

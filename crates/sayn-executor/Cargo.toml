@@ -1,0 +1,20 @@
+[package]
+name = "sayn-executor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "File materialization, dependency operations, verification, and dev-server lifecycle for Sayn"
+
+[dependencies]
+sayn-core = { path = "../sayn-core" }
+sayn-ir = { path = "../sayn-ir" }
+sayn-security = { path = "../sayn-security" }
+sayn-project = { path = "../sayn-project" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

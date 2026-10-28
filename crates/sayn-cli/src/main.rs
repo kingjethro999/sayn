@@ -35,6 +35,7 @@ fn main() {
         Commands::Whoami(args) => commands::whoami::execute(args),
         Commands::Logout(args) => commands::logout::execute(args),
         Commands::Provider(args) => commands::provider::execute(args),
+        Commands::App(args) => commands::app::execute(args, project_opt),
     };
 
     match result {

@@ -54,7 +54,7 @@ impl Default for WebConfig {
     fn default() -> Self {
         Self {
             framework: Framework::NextJs,
-            package_manager: "auto".to_string(),
+            package_manager: "pnpm".to_string(),
         }
     }
 }

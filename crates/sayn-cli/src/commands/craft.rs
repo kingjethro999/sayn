@@ -1,12 +1,13 @@
 use crate::cli::CraftArgs;
 use colored::Colorize;
 use sayn_core::{ExitCode, Severity};
+use sayn_executor::Materializer;
+use sayn_planner::build_generation_plan;
 use sayn_project::{ProjectConfig, find_project_root};
-use sayn_security::safe_write_file;
 use sayn_source::{discover_sayn_files, parse_sayn_source, validate_document};
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 pub fn execute(
     args: &CraftArgs,
@@ -98,11 +99,15 @@ pub fn execute(
         "\n{} [2/4] Planning target application...",
         "→".blue().bold()
     );
+    let plan = build_generation_plan(&root, &config, &parsed_docs)?;
     println!(
-        "  Target:    {} ({})",
-        config.sayn.target, config.web.framework
+        "  Target:     {} ({})",
+        plan.target.to_string().cyan(),
+        plan.framework.to_string().cyan()
     );
-    println!("  Output:    {}", config.output.root.display());
+    println!("  Routes:     {}", plan.routes.len());
+    println!("  Components: {}", plan.components.len());
+    println!("  Output:     {}", config.output.root.display());
     println!("  {} Plan generated", "✔".green());
 
     if args.dry_run {
@@ -148,11 +153,12 @@ pub fn execute(
             gen_root.display()
         );
     } else {
-        // Generate real Next.js application workspace
-        generate_nextjs_application(&root, &gen_root, &config, &parsed_docs)?;
+        // Materialize using sayn-executor
+        let files_count = Materializer::materialize_plan(&gen_root, &plan)?;
         println!(
-            "  {} Materialized Next.js project in {}",
+            "  {} Materialized {} Next.js artifacts in {}",
             "✔".green(),
+            files_count,
             gen_root.display()
         );
 
@@ -195,6 +201,40 @@ pub fn execute(
     }
     println!("  {} Application structure verified", "✔".green());
 
+    // Auto-install dependencies if node_modules does not exist
+    let node_modules = gen_root.join("node_modules");
+    if !node_modules.exists() {
+        let pm = if !config.web.package_manager.is_empty() {
+            config.web.package_manager.as_str()
+        } else {
+            "pnpm"
+        };
+        println!(
+            "\n{} Auto-installing dependencies with {}...",
+            "✦".cyan().bold(),
+            pm
+        );
+        match sayn_executor::DependencyManager::install_dependencies(&gen_root) {
+            Ok(true) => {
+                println!("  {} Dependencies installed successfully", "✔".green());
+            }
+            Ok(false) => {
+                println!(
+                    "  {} Failed to auto-install dependencies. Please ensure {} is installed.",
+                    "⚠".yellow().bold(),
+                    pm
+                );
+            }
+            Err(e) => {
+                println!(
+                    "  {} Dependency installation warning: {}",
+                    "⚠".yellow().bold(),
+                    e
+                );
+            }
+        }
+    }
+
     println!(
         "\n{} Sayn craft completed successfully!",
         "✔".green().bold()
@@ -202,145 +242,13 @@ pub fn execute(
 
     if args.no_run {
         println!("Dev server omitted (--no-run specified).");
+        println!("\nYou can run the application with:");
+        println!("  {}", "sayn app dev".bold());
     } else {
-        println!("\nRun the generated application with:");
-        println!("  cd {}", config.output.root.display());
-        println!("  npm install && npm run dev");
+        println!("\n{} Starting development server...", "✦".cyan().bold());
+        println!("  You can also run custom scripts with: {}\n", "sayn app <script>".bold());
+        let _ = sayn_executor::DevServerManager::start_dev_server(&gen_root, 3000);
     }
 
     Ok(ExitCode::Success)
-}
-
-fn generate_nextjs_application(
-    _root: &Path,
-    gen_root: &Path,
-    config: &ProjectConfig,
-    docs: &[sayn_source::SourceDocument],
-) -> Result<(), Box<dyn std::error::Error>> {
-    fs::create_dir_all(gen_root)?;
-
-    // 1. package.json
-    let package_json = format!(
-        r#"{{
-  "name": "{name}",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {{
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  }},
-  "dependencies": {{
-    "next": "^15.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "lucide-react": "^0.460.0"
-  }},
-  "devDependencies": {{
-    "@types/node": "^22.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "typescript": "^5.6.0"
-  }}
-}}
-"#,
-        name = config.sayn.name
-    );
-    safe_write_file(gen_root, Path::new("package.json"), package_json.as_bytes())?;
-
-    // 2. tsconfig.json
-    let tsconfig = r#"{
-  "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "plugins": [{ "name": "next" }],
-    "paths": {
-      "@/*": ["./*"]
-    }
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
-}
-"#;
-    safe_write_file(gen_root, Path::new("tsconfig.json"), tsconfig.as_bytes())?;
-
-    // 3. app/layout.tsx
-    let layout_tsx = r#"import React from "react";
-
-export const metadata = {
-  title: "Sayn Application",
-  description: "Generated by Sayn - AI-native programming language",
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <body style={{ margin: 0, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-        {children}
-      </body>
-    </html>
-  );
-}
-"#;
-    safe_write_file(gen_root, Path::new("app/layout.tsx"), layout_tsx.as_bytes())?;
-
-    // 4. app/page.tsx - synthesized from instructions
-    let mut instructions_summary = String::new();
-    for doc in docs {
-        instructions_summary.push_str(&format!("\n// Source: {}\n", doc.file_path.display()));
-        for sec in &doc.sections {
-            instructions_summary.push_str(&format!("// Section: {}\n", sec.title));
-        }
-    }
-
-    let page_tsx = format!(
-        r##"import React from "react";
-
-{summary}
-export default function HomePage() {{
-  return (
-    <main style={{{{ minHeight: "100vh", padding: "3rem 1.5rem", maxWidth: "900px", margin: "0 auto" }}}}>
-      <header style={{{{ marginBottom: "2.5rem" }}}}>
-        <h1 style={{{{ fontSize: "2.5rem", fontWeight: 800, color: "#111827", margin: 0 }}}}>
-          {name}
-        </h1>
-        <p style={{{{ fontSize: "1.25rem", color: "#4B5563", marginTop: "0.5rem" }}}}>
-          Crafted with Sayn — AI-Native Instruction-First Programming
-        </p>
-      </header>
-
-      <section style={{{{ padding: "2rem", background: "#F9FAFB", borderRadius: "12px", border: "1px solid #E5E7EB" }}}}>
-        <h2 style={{{{ fontSize: "1.5rem", fontWeight: 600, color: "#1F2937", marginTop: 0 }}}}>
-          Project Status
-        </h2>
-        <p style={{{{ color: "#374151", lineHeight: 1.6 }}}}>
-          This application was generated from .sayn instruction files and verified locally.
-        </p>
-      </section>
-    </main>
-  );
-}}
-"##,
-        name = config.sayn.name,
-        summary = instructions_summary
-    );
-    safe_write_file(gen_root, Path::new("app/page.tsx"), page_tsx.as_bytes())?;
-
-    Ok(())
 }

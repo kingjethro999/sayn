@@ -45,3 +45,6 @@ COMMANDS.md
 AGENTS.md
 CLAUDE.md
 .versionrule
+
+# Upstream analysis checkout
+vendor/
