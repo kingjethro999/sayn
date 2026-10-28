@@ -467,15 +467,17 @@ dependencies = [
 
 [[package]]
 name = "sayn-cli"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "anyhow",
  "chrono",
  "clap",
  "colored",
  "sayn-core",
+ "sayn-executor",
  "sayn-formatter",
  "sayn-ir",
+ "sayn-planner",
  "sayn-project",
  "sayn-providers",
  "sayn-security",
@@ -489,7 +491,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-core"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "chrono",
  "serde",
@@ -499,8 +501,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "sayn-executor"
+version = "0.0.5"
+dependencies = [
+ "anyhow",
+ "sayn-core",
+ "sayn-ir",
+ "sayn-project",
+ "sayn-security",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "sayn-formatter"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "sayn-core",
  "sayn-source",
@@ -510,7 +527,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-ir"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "sayn-core",
  "serde",
@@ -519,8 +536,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "sayn-planner"
+version = "0.0.5"
+dependencies = [
+ "anyhow",
+ "sayn-core",
+ "sayn-ir",
+ "sayn-project",
+ "sayn-source",
+ "sayn-state",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "sayn-project"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "sayn-core",
  "sayn-ir",
@@ -537,7 +570,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-providers"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "anyhow",
  "sayn-core",
@@ -549,7 +582,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-security"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "sayn-core",
  "serde",
@@ -559,7 +592,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-source"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "hex",
  "sayn-core",
@@ -573,7 +606,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-state"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "chrono",
  "hex",

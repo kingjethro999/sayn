@@ -95,6 +95,9 @@ pub enum Commands {
 
     #[command(about = "Manage AI model providers")]
     Provider(ProviderArgs),
+
+    #[command(about = "Run scripts or package manager commands in the generated application")]
+    App(AppArgs),
 }
 
 #[derive(Args, Debug, PartialEq)]
@@ -314,4 +317,13 @@ pub enum ProviderSubcommand {
         #[arg(help = "Provider name to remove")]
         name: String,
     },
+}
+
+#[derive(Args, Debug, PartialEq)]
+pub struct AppArgs {
+    #[arg(help = "The script to run from package.json (e.g., dev, build, start, lint)")]
+    pub script: Option<String>,
+
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true, help = "Additional arguments to pass to the script")]
+    pub args: Vec<String>,
 }
