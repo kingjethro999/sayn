@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/sayn-cli",
+    "crates/sayn-core",
+    "crates/sayn-source",
+    "crates/sayn-project",
+    "crates/sayn-formatter",
+    "crates/sayn-ir",
+    "crates/sayn-security",
+]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/kingjethro999/sayn"
+description = "Sayn: an AI-native, instruction-first programming language"
+rust-version = "1.85"
+
+[workspace.dependencies]
+# Shared dependencies
+clap = { version = "4", features = ["derive", "env"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+thiserror = "2"
+anyhow = "1"
+uuid = { version = "1", features = ["v4"] }
+sha2 = "0.10"
+hex = "0.4"
+walkdir = "2"
+colored = "3"
+chrono = { version = "0.4", features = ["serde"] }
+tempfile = "3"

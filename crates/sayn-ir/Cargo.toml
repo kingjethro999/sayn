@@ -1,0 +1,13 @@
+[package]
+name = "sayn-ir"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Intermediate representation and generation plan specifications for Sayn"
+
+[dependencies]
+sayn-core = { path = "../sayn-core" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

@@ -1,0 +1,47 @@
+# Build artifacts
+/target/
+**/target/
+
+# Cargo.lock is tracked for binaries
+!Cargo.lock
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Generated application artifacts (inside user projects, not the compiler repo)
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Sayn internal state (inside user projects)
+.sayn/state/
+.sayn/cache/
+.sayn/logs/
+.sayn/tmp/
+
+# OS files
+.DS_Store
+*.swp
+
+# Planfiles
+COMMANDS.md
+AGENTS.md
+CLAUDE.md
+.versionrule

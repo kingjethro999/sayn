@@ -1,0 +1,15 @@
+[package]
+name = "sayn-formatter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Deterministic non-AI formatter for .sayn instruction files"
+
+[dependencies]
+sayn-core = { path = "../sayn-core" }
+sayn-source = { path = "../sayn-source" }
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

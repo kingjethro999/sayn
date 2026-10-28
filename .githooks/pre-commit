@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pre-commit hook: Verify Sayn version consistency
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+if [ -f "${REPO_ROOT}/scripts/version.py" ]; then
+    python3 "${REPO_ROOT}/scripts/version.py" --check
+fi

@@ -1,0 +1,16 @@
+[package]
+name = "sayn-security"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Path confinement and security boundary enforcement for Sayn"
+
+[dependencies]
+sayn-core = { path = "../sayn-core" }
+serde.workspace = true
+thiserror.workspace = true
+tempfile.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
