@@ -7,7 +7,6 @@
 
 # IDE and editor
 .idea/
-.vscode/
 *.swp
 *.swo
 *~
@@ -22,6 +21,7 @@ __pycache__/
 !.env.example
 *.pem
 *.key
+temp_auto_push.bat
 
 # Generated application artifacts (inside user projects, not the compiler repo)
 node_modules/
@@ -44,4 +44,5 @@ build/
 COMMANDS.md
 AGENTS.md
 CLAUDE.md
-.versionrule
+.versionrule.gitignore
+branch_structure.json
