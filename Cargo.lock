@@ -467,7 +467,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-cli"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "chrono",
@@ -491,7 +491,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-core"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "chrono",
  "serde",
@@ -502,7 +502,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-executor"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "sayn-core",
@@ -517,7 +517,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-formatter"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "sayn-core",
  "sayn-source",
@@ -527,7 +527,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-ir"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "sayn-core",
  "serde",
@@ -537,7 +537,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-planner"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "sayn-core",
@@ -553,7 +553,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-project"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "sayn-core",
  "sayn-ir",
@@ -570,7 +570,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-providers"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "sayn-core",
@@ -582,7 +582,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-security"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "sayn-core",
  "serde",
@@ -592,7 +592,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-source"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "hex",
  "sayn-core",
@@ -606,7 +606,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-state"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "chrono",
  "hex",
@@ -818,9 +818,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.29.0"
+version = "1.29.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a0e2d11620c50695fe12bbbfde96b3477fe606e7284c22d505c12ce51214514"
+checksum = "bed99139f7dac9b5cfe5f17be4d66dc7079a34dee1d74bcc77217119240e267c"
 dependencies = [
  "getrandom",
  "js-sys",
