@@ -164,24 +164,34 @@ A valid login does **not** grant unrestricted access to every upstream model. Sa
 ```
 
 ### 6.2 Stdio JSON-RPC 2.0 Protocol Handshake
-1. **Startup**: Sayn spawns `python3 -m tui_gateway.entry` with redirected stdin/stdout.
-2. **Handshake**: Gateway emits `gateway.ready` event:
+
+> **Status (2026-11-13):** the gateway is an optional backend and is **not** used by `sayn craft`. Craft generates through the direct provider path. See `docs/adr/0001-provider-and-hermes-runtime-boundary.md`. The shapes below are taken from the wire contracts at the tracked revision (`tui_gateway/contracts/`) and are exercised by `sayn-hermes-runtime` against a fixture, not yet against a live gateway.
+
+1. **Startup**: Sayn spawns `python -m tui_gateway.entry` from the managed runtime with piped stdin/stdout. Lines on stdout that are not JSON objects are ignored.
+2. **Ready**: the gateway emits a `gateway.ready` event. Sayn waits for it with a bounded timeout:
    ```json
-   {"jsonrpc": "2.0", "method": "event", "params": {"type": "gateway.ready", "payload": {"change_events": true}}}
+   {"jsonrpc": "2.0", "method": "event", "params": {"type": "gateway.ready", "payload": {"skin": {}, "change_events": true, "replay_epoch": 1}}}
    ```
-3. **Session Creation**:
+3. **Capabilities**: Sayn declares that it answers gateway-initiated requests. It answers all of them with error `-32601` (see step 7):
    ```json
-   {"jsonrpc": "2.0", "id": 1, "method": "session.create", "params": {"workdir": "<project_dir>", "model": "<model_id>"}}
+   {"jsonrpc": "2.0", "id": 1, "method": "client.capabilities", "params": {"server_requests": true}}
    ```
-4. **Prompt Submission**:
-   Sayn submits the synthesized compilation prompt containing parsed `.sayn` instructions and constraints:
+4. **Session creation** (the working directory key is `cwd`; unknown keys are rejected with error `4000`):
    ```json
-   {"jsonrpc": "2.0", "id": 2, "method": "prompt.submit", "params": {"session_id": "<sid>", "text": "<structured_instruction_task>"}}
+   {"jsonrpc": "2.0", "id": 2, "method": "session.create", "params": {"cwd": "<dir>", "cwd_explicit": true, "model": "<model_id>", "close_on_disconnect": true}}
    ```
-5. **Streaming Events**:
-   Gateway returns real-time progress events (`token`, `tool_call`, `file_diff`).
-6. **Completion**:
-   Sayn captures modified files, validates them through `sayn_security`, materializes them under `.sayn/generated`, runs package installation (`pnpm install`), and launches development verification.
+5. **Prompt submission**:
+   ```json
+   {"jsonrpc": "2.0", "id": 3, "method": "prompt.submit", "params": {"session_id": "<sid>", "text": "<task>"}}
+   ```
+6. **Events**: progress arrives as `event` notifications, interleaved with responses. Responses are matched by `id`; a response for another id is discarded.
+7. **Gateway-initiated requests**: the gateway may send requests with ids of the form `srq-<hex>` (`approval`, `clarify`, `sudo`, `secret`, and others). Sayn implements none of them and replies to each with:
+   ```json
+   {"jsonrpc": "2.0", "id": "srq-<hex>", "error": {"code": -32601, "message": "'approval' is not supported by the Sayn client"}}
+   ```
+8. **Interrupt and cleanup**: `session.interrupt {session_id}` asks the gateway to stop a turn. Independently of the gateway, Sayn can stop the process, and always reaps it when the client is dropped.
+
+**Not implemented:** nothing imports files written by a gateway agent into `.sayn/generated`. Any such import must go through `sayn-state::GenerationTransaction`, as the ADR requires.
 
 ---
 

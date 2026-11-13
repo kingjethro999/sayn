@@ -1,7 +1,10 @@
+pub mod rpc;
+
+pub use rpc::{DeniedServerRequest, GatewayEvent, HermesRpcClient, METHOD_NOT_FOUND, RpcTimeouts};
+
 use serde::{Deserialize, Serialize};
-use std::io::{BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -20,6 +23,15 @@ pub enum RuntimeError {
 
     #[error("RPC communication error: {0}")]
     RpcError(String),
+
+    #[error("the Hermes gateway returned error {code}: {message}")]
+    RpcRemote { code: i64, message: String },
+
+    #[error("timed out waiting for {0} from the Hermes gateway")]
+    Timeout(String),
+
+    #[error("the Hermes gateway closed the connection")]
+    GatewayClosed,
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -210,93 +222,6 @@ impl RuntimeManager {
             dependencies_installed: deps_ok,
             agent_comm_ok,
         }
-    }
-}
-
-/// JSON-RPC 2.0 Client for communicating with the embedded Hermes gateway.
-pub struct HermesRpcClient {
-    child: Child,
-    request_id: u64,
-}
-
-impl HermesRpcClient {
-    /// Spawn the Hermes TUI gateway process using the managed runtime.
-    pub fn spawn(hermes_dir: &Path) -> Result<Self, RuntimeError> {
-        let py = RuntimeManager::venv_python();
-        if !py.exists() {
-            RuntimeManager::ensure_runtime()?;
-        }
-
-        let child = Command::new(&py)
-            .args(["-m", "tui_gateway.entry"])
-            .current_dir(hermes_dir)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
-
-        // Wait for gateway.ready event on stdout
-        let client = Self {
-            child,
-            request_id: 1,
-        };
-
-        Ok(client)
-    }
-
-    /// Send a request and wait for the response.
-    pub fn call(
-        &mut self,
-        method: &str,
-        params: serde_json::Value,
-    ) -> Result<serde_json::Value, RuntimeError> {
-        let id = self.request_id;
-        self.request_id += 1;
-
-        let req = serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": id,
-            "method": method,
-            "params": params
-        });
-
-        let line = format!("{}\n", serde_json::to_string(&req)?);
-
-        if let Some(ref mut stdin) = self.child.stdin {
-            stdin.write_all(line.as_bytes())?;
-            stdin.flush()?;
-        } else {
-            return Err(RuntimeError::RpcError("No stdin handle".into()));
-        }
-
-        // Read responses until matching id is received
-        if let Some(ref mut stdout) = self.child.stdout {
-            let reader = BufReader::new(stdout);
-            for l in reader.lines() {
-                let text = l?;
-                if text.trim().is_empty() {
-                    continue;
-                }
-
-                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
-                    if val.get("id").and_then(|v| v.as_u64()) == Some(id) {
-                        if let Some(res) = val.get("result") {
-                            return Ok(res.clone());
-                        } else if let Some(err) = val.get("error") {
-                            return Err(RuntimeError::RpcError(err.to_string()));
-                        }
-                    }
-                }
-            }
-        }
-
-        Err(RuntimeError::RpcError("EOF without response".into()))
-    }
-}
-
-impl Drop for HermesRpcClient {
-    fn drop(&mut self) {
-        let _ = self.child.kill();
     }
 }
 

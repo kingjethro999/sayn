@@ -164,11 +164,11 @@
 - Consumes: newline-delimited JSON-RPC from the pinned Hermes gateway.
 - Produces: a tested `HermesRpcClient` supporting `gateway.ready`, `client.capabilities`, `session.create`, `prompt.submit`, event streaming, server-request denial, cancellation, and process cleanup.
 
-- [ ] **Step 1: Write failing fake-gateway tests** for readiness, interleaved events, matching response IDs, unsupported server requests, EOF, timeout, and child cleanup.
-- [ ] **Step 2: Run `cargo test -p sayn-hermes-runtime`** and verify the current blocking reader cannot satisfy the protocol cases.
-- [ ] **Step 3: Implement a persistent reader and event channel**, advertise supported client capabilities, deny unimplemented privileged requests with JSON-RPC `-32601`, and bound waits.
-- [ ] **Step 4: Record the ADR**: direct provider generation is the MVP compiler path; Hermes gateway is an optional compatible agent backend until its tool mediation can guarantee Rust-owned writes.
-- [ ] **Step 5: Run `cargo test -p sayn-hermes-runtime`** and verify protocol tests and process cleanup pass.
+- [x] **Step 1: Write failing fake-gateway tests** for readiness, interleaved events, matching response IDs, unsupported server requests, EOF, timeout, and child cleanup.
+- [x] **Step 2: Run `cargo test -p sayn-hermes-runtime`** and verify the current blocking reader cannot satisfy the protocol cases.
+- [x] **Step 3: Implement a persistent reader and event channel**, advertise supported client capabilities, deny unimplemented privileged requests with JSON-RPC `-32601`, and bound waits.
+- [x] **Step 4: Record the ADR**: direct provider generation is the MVP compiler path; Hermes gateway is an optional compatible agent backend until its tool mediation can guarantee Rust-owned writes.
+- [x] **Step 5: Run `cargo test -p sayn-hermes-runtime`** and verify protocol tests and process cleanup pass.
 
 ### Task 8: Release-Quality Verification and Honest Documentation
 
