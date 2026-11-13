@@ -145,11 +145,11 @@
 - Consumes: auth, entitled model catalog, generation provider, generation transaction, dependency manager, and framework validator.
 - Produces: a staged craft pipeline with failed/completed/cancelled run states and nonzero exit classifications.
 
-- [ ] **Step 1: Write failing integration tests** for Nous craft, BYOK craft, no credentials, unavailable model, schema failure, validation failure, unchanged-source no-inference reuse, and preserved prior output.
-- [ ] **Step 2: Run the focused integration test** and verify current craft incorrectly succeeds or mutates output in the failure cases.
-- [ ] **Step 3: Rebuild craft as explicit stages**: discover, validate source, resolve provider, refresh auth, validate model, generate, stage, validate candidate, commit, save run, optionally serve.
-- [ ] **Step 4: Run actual package-manager install/build commands only under policy**, capture exact exit status, and never turn warnings into success.
-- [ ] **Step 5: Run `cargo test --workspace`** and verify the complete suite passes.
+- [x] **Step 1: Write failing integration tests** for Nous craft, BYOK craft, no credentials, unavailable model, schema failure, validation failure, unchanged-source no-inference reuse, and preserved prior output.
+- [x] **Step 2: Run the focused integration test** and verify current craft incorrectly succeeds or mutates output in the failure cases.
+- [x] **Step 3: Rebuild craft as explicit stages**: discover, validate source, resolve provider, refresh auth, validate model, generate, stage, validate candidate, commit, save run, optionally serve.
+- [x] **Step 4: Run actual package-manager install/build commands only under policy**, capture exact exit status, and never turn warnings into success.
+- [x] **Step 5: Run `cargo test --workspace`** and verify the complete suite passes.
 
 ### Task 7: Hermes Gateway Compatibility Boundary
 

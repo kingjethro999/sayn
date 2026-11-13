@@ -86,6 +86,13 @@ pub fn execute(
     if let Some(session) = sayn_hermes_executor::SessionManager::load_latest(&root) {
         println!("\nLatest Execution Session:");
         println!("  Run ID:     {}", session.run_id.dimmed());
+        let state = match session.status {
+            sayn_hermes_executor::SessionStatus::Running => {
+                "interrupted (did not finish; generated files were not changed)".to_string()
+            }
+            other => other.to_string(),
+        };
+        println!("  Status:     {}", state);
         println!("  Model:      {}", session.model.cyan());
         println!("  Timestamp:  {}", session.started_at);
         println!("  Operations: {}", session.operations_count);

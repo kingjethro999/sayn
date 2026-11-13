@@ -34,3 +34,10 @@ thiserror.workspace = true
 toml.workspace = true
 chrono.workspace = true
 uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[[test]]
+name = "web_mvp"
+path = "../../tests/integration/web_mvp.rs"

@@ -1,5 +1,9 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
+
+/// Default bound on one package-manager command.
+pub const TOOL_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 
 /// Manages Node.js dependencies through pnpm (preferred) or npm (fallback).
 pub struct DependencyManager;
@@ -45,6 +49,64 @@ impl DependencyManager {
             Some("npm")
         } else {
             None
+        }
+    }
+
+    /// Resolve the package manager for a project preference (`"pnpm"`,
+    /// `"npm"`, or `"auto"`/empty). An explicit preference is never silently
+    /// replaced by a different tool.
+    pub fn resolve_package_manager(preference: &str) -> Option<&'static str> {
+        match preference.trim().to_lowercase().as_str() {
+            "pnpm" => Self::is_pnpm_installed().then_some("pnpm"),
+            "npm" => Self::is_npm_installed().then_some("npm"),
+            _ => Self::detect_package_manager(),
+        }
+    }
+
+    /// Run `<package manager> <args...>` in `dir`, bounded by `timeout`.
+    ///
+    /// The executable and arguments are passed as an argument array, never
+    /// through a shell. Returns `Err` describing the exact exit status, a
+    /// timeout, or a failure to start; a nonzero exit is never success.
+    pub fn run_bounded(
+        package_manager: &str,
+        args: &[&str],
+        dir: &Path,
+        timeout: Duration,
+    ) -> Result<(), String> {
+        let label = format!("{package_manager} {}", args.join(" "));
+        let mut child = Command::new(package_manager)
+            .args(args)
+            .current_dir(dir)
+            .env("COREPACK_ENABLE_DOWNLOAD_PROMPT", "0")
+            .env("CI", "1")
+            .stdin(Stdio::null())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .map_err(|error| format!("'{label}' could not be started: {error}"))?;
+
+        let started = Instant::now();
+        loop {
+            match child.try_wait() {
+                Ok(Some(status)) if status.success() => return Ok(()),
+                Ok(Some(status)) => {
+                    return Err(match status.code() {
+                        Some(code) => format!("'{label}' exited with code {code}"),
+                        None => format!("'{label}' was terminated by a signal"),
+                    });
+                }
+                Ok(None) if started.elapsed() >= timeout => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err(format!(
+                        "'{label}' did not finish within {} seconds and was stopped",
+                        timeout.as_secs()
+                    ));
+                }
+                Ok(None) => std::thread::sleep(Duration::from_millis(100)),
+                Err(error) => return Err(format!("'{label}' could not be monitored: {error}")),
+            }
         }
     }
 
@@ -125,6 +187,43 @@ impl DependencyManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn run_bounded_reports_the_exact_exit_code() {
+        let dir = std::env::temp_dir();
+        assert!(DependencyManager::run_bounded("true", &[], &dir, TOOL_TIMEOUT).is_ok());
+
+        let error = DependencyManager::run_bounded("sh", &["-c", "exit 3"], &dir, TOOL_TIMEOUT)
+            .unwrap_err();
+        assert!(error.contains("exited with code 3"), "{error}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn run_bounded_stops_a_command_that_exceeds_its_timeout() {
+        let dir = std::env::temp_dir();
+        let started = Instant::now();
+
+        let error =
+            DependencyManager::run_bounded("sleep", &["30"], &dir, Duration::from_millis(300))
+                .unwrap_err();
+
+        assert!(error.contains("did not finish"), "{error}");
+        assert!(started.elapsed() < Duration::from_secs(10));
+    }
+
+    #[test]
+    fn run_bounded_reports_a_missing_executable() {
+        let error = DependencyManager::run_bounded(
+            "sayn-no-such-tool",
+            &["install"],
+            &std::env::temp_dir(),
+            TOOL_TIMEOUT,
+        )
+        .unwrap_err();
+        assert!(error.contains("could not be started"), "{error}");
+    }
 
     #[test]
     fn test_node_detection() {

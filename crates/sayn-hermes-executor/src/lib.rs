@@ -6,7 +6,7 @@ pub mod task;
 
 pub use operations::{FileOperation, OperationError, OperationValidator};
 pub use repair::{BoundedRepair, DiagnosticIssue};
-pub use runner::{ExecutionResult, ExecutorError, HermesExecutor};
+pub use runner::{CandidateCheck, ExecutionResult, ExecutorError, HermesExecutor};
 pub use session::{ExecutionSession, SessionManager, SessionStatus};
 pub use task::{GenerationTask, TaskInstruction};
 

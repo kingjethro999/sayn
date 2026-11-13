@@ -10,6 +10,7 @@ use sayn_providers::{
     GenerationProvider, GenerationRequest, NousProvider, OpenAiProvider, ProviderError,
 };
 use sayn_state::Manifest;
+use std::path::Path;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -45,11 +46,17 @@ pub struct ExecutionResult {
     pub model_used: String,
     pub provider_used: String,
     pub operations_applied: usize,
+    /// Whether this run wrote `package.json`, so dependencies need reinstalling.
+    pub package_manifest_changed: bool,
     /// Digests of all managed generated files after this run, for the manifest.
     pub generated_hashes: std::collections::HashMap<String, String>,
 }
 
 pub struct HermesExecutor;
+
+/// A check run on the complete candidate application before it replaces the
+/// current one. An `Err` aborts the run and leaves the output untouched.
+pub type CandidateCheck<'a> = &'a dyn Fn(&Path) -> Result<(), String>;
 
 impl HermesExecutor {
     /// Execute a generation task against the user's configured provider.
@@ -57,13 +64,82 @@ impl HermesExecutor {
         task: &GenerationTask,
         plan: &GenerationPlan,
     ) -> Result<ExecutionResult, ExecutorError> {
+        Self::execute_validated(task, plan, &|_| Ok(()))
+    }
+
+    /// Like [`Self::execute`], with an additional caller-supplied check (for
+    /// example a framework build) on the candidate application. The run is
+    /// recorded as running, then completed or failed.
+    pub fn execute_validated(
+        task: &GenerationTask,
+        _plan: &GenerationPlan,
+        framework_check: CandidateCheck<'_>,
+    ) -> Result<ExecutionResult, ExecutorError> {
         let model = if task.model.is_empty() {
             ModelCatalog::get_active_model()
         } else {
             task.model.clone()
         };
-        let provider = Self::resolve_provider(&model)?;
-        Self::execute_with_provider(task, plan, provider.as_deref())
+        Self::recorded(task, &model, |session| {
+            let provider = Self::resolve_provider(&model)?;
+            Self::run(task, provider.as_deref(), framework_check, session)
+        })
+    }
+
+    #[cfg(test)]
+    fn execute_with_provider(
+        task: &GenerationTask,
+        _plan: &GenerationPlan,
+        provider: Option<&dyn GenerationProvider>,
+    ) -> Result<ExecutionResult, ExecutorError> {
+        Self::recorded(task, &task.model, |session| {
+            Self::run(task, provider, &|_| Ok(()), session)
+        })
+    }
+
+    /// Persist the run's state around `body`: `Running` before it starts, then
+    /// `Completed` or `Failed`. A run that is killed stays `Running` on disk,
+    /// which later commands report as interrupted.
+    fn recorded<F>(
+        task: &GenerationTask,
+        model: &str,
+        body: F,
+    ) -> Result<ExecutionResult, ExecutorError>
+    where
+        F: FnOnce(&mut ExecutionSession) -> Result<ExecutionResult, ExecutorError>,
+    {
+        let mut session = ExecutionSession {
+            session_id: format!("sess-{}", task.run_id),
+            project_id: task.project_id.clone(),
+            run_id: task.run_id.clone(),
+            started_at: chrono::Utc::now().to_rfc3339(),
+            completed_at: None,
+            model: model.to_string(),
+            provider: "unresolved".into(),
+            status: SessionStatus::Running,
+            source_hashes: task.source_hashes.clone(),
+            applied_operations: Vec::new(),
+            operations_count: 0,
+            notes: None,
+        };
+        let _ = SessionManager::save(&task.project_root, &session);
+
+        let outcome = body(&mut session);
+
+        session.completed_at = Some(chrono::Utc::now().to_rfc3339());
+        match &outcome {
+            Ok(_) => {
+                session.status = SessionStatus::Completed;
+                session.notes = Some(format!("Generated via {}", session.provider));
+            }
+            Err(error) => {
+                session.status = SessionStatus::Failed;
+                // Executor errors never carry credentials or response bodies.
+                session.notes = Some(error.to_string());
+            }
+        }
+        let _ = SessionManager::save(&task.project_root, &session);
+        outcome
     }
 
     /// Pick the provider the user configured, in a fixed order: a stored Nous
@@ -97,14 +173,12 @@ impl HermesExecutor {
         Ok(None)
     }
 
-    fn execute_with_provider(
+    fn run(
         task: &GenerationTask,
-        _plan: &GenerationPlan,
         provider: Option<&dyn GenerationProvider>,
+        framework_check: CandidateCheck<'_>,
+        session: &mut ExecutionSession,
     ) -> Result<ExecutionResult, ExecutorError> {
-        let run_id = task.run_id.clone();
-        let started_at = chrono::Utc::now().to_rfc3339();
-
         let provider = provider.ok_or_else(|| {
             ExecutorError::ProviderUnavailable(
                 "run 'sayn auth nous' or configure a supported BYOK credential".into(),
@@ -112,6 +186,8 @@ impl HermesExecutor {
         })?;
         let provider_name = provider.name().to_string();
         let active_model = provider.model().to_string();
+        session.provider = provider_name.clone();
+        session.model = active_model.clone();
 
         println!(
             "  {} Requesting generation from {} with model {}...",
@@ -153,10 +229,13 @@ impl HermesExecutor {
         let report = Materializer::materialize_response(
             &task.project_root,
             &task.output_root,
-            &run_id,
+            &task.run_id,
             &response,
             previous.as_ref(),
-            Self::validate_candidate,
+            |candidate| {
+                Self::validate_candidate(candidate)?;
+                framework_check(candidate)
+            },
         )?;
         let applied_ops: Vec<String> = report
             .written
@@ -164,39 +243,22 @@ impl HermesExecutor {
             .map(|path| format!("Wrote {path}"))
             .chain(report.deleted.iter().map(|path| format!("Deleted {path}")))
             .collect();
-
-        let completed_at = chrono::Utc::now().to_rfc3339();
-
-        // Record persistent session
-        let session = ExecutionSession {
-            session_id: format!("sess-{}", run_id),
-            project_id: task.project_id.clone(),
-            run_id: run_id.clone(),
-            started_at,
-            completed_at: Some(completed_at),
-            model: active_model.clone(),
-            provider: provider_name.clone(),
-            status: SessionStatus::Completed,
-            source_hashes: task.source_hashes.clone(),
-            applied_operations: applied_ops.clone(),
-            operations_count: applied_ops.len(),
-            notes: Some(format!("Generated via {}", provider_name)),
-        };
-
-        let _ = SessionManager::save(&task.project_root, &session);
+        session.operations_count = applied_ops.len();
+        session.applied_operations = applied_ops;
 
         Ok(ExecutionResult {
-            run_id,
+            run_id: task.run_id.clone(),
             model_used: active_model,
             provider_used: provider_name,
-            operations_applied: applied_ops.len(),
+            operations_applied: session.operations_count,
+            package_manifest_changed: report.written.iter().any(|path| path == "package.json"),
             generated_hashes: report.generated_hashes,
         })
     }
 
     /// Structural checks on the candidate application before it replaces the
     /// current one. Missing pieces are reported, never filled in.
-    fn validate_candidate(candidate: &std::path::Path) -> Result<(), String> {
+    fn validate_candidate(candidate: &Path) -> Result<(), String> {
         let problems: Vec<String> = BoundedRepair::inspect_workspace(candidate)
             .into_iter()
             .filter(|issue| issue.severity == "error")
@@ -306,7 +368,10 @@ mod tests {
 
         assert!(matches!(error, ExecutorError::ProviderUnavailable(_)));
         assert!(!task.output_root.join("package.json").exists());
-        assert!(SessionManager::load_latest(dir.path()).is_none());
+        assert_eq!(
+            SessionManager::load_latest(dir.path()).unwrap().status,
+            SessionStatus::Failed
+        );
     }
 
     #[test]
@@ -323,7 +388,10 @@ mod tests {
         assert!(matches!(error, ExecutorError::ProviderRequest(_)));
         assert!(!error.to_string().contains("secret-token"));
         assert!(!task.output_root.join("package.json").exists());
-        assert!(SessionManager::load_latest(dir.path()).is_none());
+        assert_eq!(
+            SessionManager::load_latest(dir.path()).unwrap().status,
+            SessionStatus::Failed
+        );
     }
 
     const FULL_APP: &str = r#"{"schema_version":1,"operations":[
@@ -372,7 +440,10 @@ mod tests {
         assert!(matches!(error, ExecutorError::ProviderSchema(_)));
         assert!(!dir.path().join(".sayn/generated/app/page.tsx").exists());
         assert!(!dir.path().join("escape.txt").exists());
-        assert!(SessionManager::load_latest(dir.path()).is_none());
+        assert_eq!(
+            SessionManager::load_latest(dir.path()).unwrap().status,
+            SessionStatus::Failed
+        );
     }
 
     #[test]
@@ -390,7 +461,10 @@ mod tests {
         assert!(!output.join("app/page.tsx").exists());
         assert!(!output.join("app/layout.tsx").exists());
         assert!(!output.join("package.json").exists());
-        assert!(SessionManager::load_latest(dir.path()).is_none());
+        assert_eq!(
+            SessionManager::load_latest(dir.path()).unwrap().status,
+            SessionStatus::Failed
+        );
     }
 
     #[test]
