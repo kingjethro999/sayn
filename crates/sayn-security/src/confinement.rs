@@ -32,7 +32,12 @@ pub fn is_safe_relative_path(path: &Path) -> bool {
 }
 
 /// Confines `relative_or_target` to `root`.
-/// Returns the canonical or safe combined path if it strictly resides within `root`.
+///
+/// Returns the combined path if it strictly resides within `root`. Every
+/// existing component along the way is inspected without following it first:
+/// a symbolic link is accepted only if it resolves to a location inside
+/// `root`, and a dangling link is rejected, so a write can never be redirected
+/// through a link that points elsewhere.
 pub fn confine_path(root: &Path, relative_or_target: &Path) -> Result<PathBuf, ConfinementError> {
     if !is_safe_relative_path(relative_or_target) {
         return Err(ConfinementError::PathEscape(
@@ -40,40 +45,33 @@ pub fn confine_path(root: &Path, relative_or_target: &Path) -> Result<PathBuf, C
         ));
     }
 
-    let combined = root.join(relative_or_target);
+    let canonical_root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
+    let escape = || ConfinementError::SymlinkEscape(relative_or_target.display().to_string());
 
-    // Normalize path by components
-    let mut normalized = PathBuf::new();
-    for comp in combined.components() {
-        match comp {
-            Component::ParentDir => {
-                if !normalized.pop() {
-                    return Err(ConfinementError::PathEscape(
-                        relative_or_target.display().to_string(),
-                    ));
+    let mut current = root.to_path_buf();
+    let mut missing = false;
+    for component in relative_or_target.components() {
+        let Component::Normal(part) = component else {
+            continue;
+        };
+        current.push(part);
+        if missing {
+            continue;
+        }
+        match fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                let resolved = current.canonicalize().map_err(|_| escape())?;
+                if !resolved.starts_with(&canonical_root) {
+                    return Err(escape());
                 }
             }
-            Component::CurDir => {}
-            other => normalized.push(other.as_os_str()),
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => missing = true,
+            Err(error) => return Err(ConfinementError::Io(error.to_string())),
         }
     }
 
-    // Verify normalized starts with root (if root exists or can be resolved)
-    let canonical_root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
-
-    // If the file exists, canonicalize to verify no symlink escapes
-    if normalized.exists() {
-        let canonical_normalized = normalized
-            .canonicalize()
-            .map_err(|e| ConfinementError::Io(e.to_string()))?;
-        if !canonical_normalized.starts_with(&canonical_root) {
-            return Err(ConfinementError::SymlinkEscape(
-                relative_or_target.display().to_string(),
-            ));
-        }
-    }
-
-    Ok(normalized)
+    Ok(current)
 }
 
 /// Safely writes content to `file_path` strictly within `root`, creating parent directories if needed.

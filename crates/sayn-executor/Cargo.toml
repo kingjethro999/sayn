@@ -11,6 +11,7 @@ sayn-core = { path = "../sayn-core" }
 sayn-ir = { path = "../sayn-ir" }
 sayn-security = { path = "../sayn-security" }
 sayn-project = { path = "../sayn-project" }
+sayn-state = { path = "../sayn-state" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

@@ -1,11 +1,59 @@
-use sayn_ir::GenerationPlan;
+use sayn_ir::{GeneratedOperation, GenerationPlan, GenerationResponse};
 use sayn_security::safe_write_file;
+use sayn_state::{CommitReport, GenerationTransaction, Manifest, StagedChange, TransactionError};
 use std::fs;
 use std::path::Path;
 
 pub struct Materializer;
 
 impl Materializer {
+    /// Apply a validated generation response to the generated project as one
+    /// transaction.
+    ///
+    /// Every operation is confined and checked against `previous` (the last
+    /// accepted manifest), the complete candidate tree is passed to
+    /// `validate`, and only then is the real output changed. On any error the
+    /// existing output is left as it was. `retain` operations change nothing.
+    pub fn materialize_response<F>(
+        project_root: &Path,
+        gen_root: &Path,
+        run_id: &str,
+        response: &GenerationResponse,
+        previous: Option<&Manifest>,
+        validate: F,
+    ) -> Result<CommitReport, TransactionError>
+    where
+        F: FnOnce(&Path) -> Result<(), String>,
+    {
+        let changes: Vec<StagedChange> = response
+            .operations
+            .iter()
+            .filter_map(|operation| match operation {
+                GeneratedOperation::Create { path, content }
+                | GeneratedOperation::Modify { path, content } => Some(StagedChange::Write {
+                    path: path.clone(),
+                    content: content.clone().into_bytes(),
+                }),
+                GeneratedOperation::Delete { path } => {
+                    Some(StagedChange::Delete { path: path.clone() })
+                }
+                GeneratedOperation::Retain { .. } => None,
+            })
+            .collect();
+
+        fs::create_dir_all(gen_root)?;
+        let mut transaction =
+            GenerationTransaction::begin(project_root, gen_root, run_id, previous)?;
+        let staged = transaction
+            .stage(&changes)
+            .and_then(|()| transaction.validate(validate));
+        if let Err(error) = staged {
+            let _ = transaction.abort();
+            return Err(error);
+        }
+        transaction.commit()
+    }
+
     pub fn materialize_plan(
         gen_root: &Path,
         plan: &GenerationPlan,
@@ -375,6 +423,138 @@ mod tests {
     use sayn_core::{Framework, Target};
     use sayn_ir::{ComponentPlan, DependencyPlan, RoutePlan, TokenEstimate};
     use tempfile::tempdir;
+
+    fn response(operations: Vec<GeneratedOperation>) -> GenerationResponse {
+        GenerationResponse {
+            schema_version: sayn_ir::GENERATION_SCHEMA_VERSION,
+            operations,
+            acceptance_checks: Vec::new(),
+            summary: String::new(),
+        }
+    }
+
+    fn create(path: &str, content: &str) -> GeneratedOperation {
+        GeneratedOperation::Create {
+            path: path.into(),
+            content: content.into(),
+        }
+    }
+
+    #[test]
+    fn response_is_applied_and_retain_changes_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let gen_root = dir.path().join(".sayn/generated");
+
+        let report = Materializer::materialize_response(
+            dir.path(),
+            &gen_root,
+            "run-1",
+            &response(vec![
+                create("app/page.tsx", "page"),
+                GeneratedOperation::Retain {
+                    path: "package.json".into(),
+                },
+            ]),
+            None,
+            |_| Ok(()),
+        )
+        .unwrap();
+
+        assert_eq!(report.written, vec!["app/page.tsx"]);
+        assert_eq!(
+            fs::read_to_string(gen_root.join("app/page.tsx")).unwrap(),
+            "page"
+        );
+        assert!(!gen_root.join("package.json").exists());
+    }
+
+    #[test]
+    fn one_escaping_operation_blocks_the_whole_response() {
+        let dir = tempfile::tempdir().unwrap();
+        let gen_root = dir.path().join(".sayn/generated");
+
+        let error = Materializer::materialize_response(
+            dir.path(),
+            &gen_root,
+            "run-1",
+            &response(vec![
+                create("app/page.tsx", "page"),
+                create("../../escape.txt", "bad"),
+            ]),
+            None,
+            |_| Ok(()),
+        )
+        .unwrap_err();
+
+        assert!(matches!(error, TransactionError::UnsafePath(_)));
+        assert!(!gen_root.join("app/page.tsx").exists());
+        assert!(!dir.path().join("escape.txt").exists());
+        assert!(!dir.path().join(".sayn/staging/run-1").exists());
+    }
+
+    #[test]
+    fn failed_validation_keeps_the_previous_application() {
+        let dir = tempfile::tempdir().unwrap();
+        let gen_root = dir.path().join(".sayn/generated");
+        fs::create_dir_all(gen_root.join("app")).unwrap();
+        fs::write(gen_root.join("app/page.tsx"), "working page").unwrap();
+        let mut manifest = Manifest::new("p", "1");
+        manifest.generated_hashes.insert(
+            ".sayn/generated/app/page.tsx".into(),
+            Manifest::compute_sha256(b"working page"),
+        );
+
+        let error = Materializer::materialize_response(
+            dir.path(),
+            &gen_root,
+            "run-1",
+            &response(vec![create("app/page.tsx", "broken page")]),
+            Some(&manifest),
+            |candidate| {
+                assert_eq!(
+                    fs::read_to_string(candidate.join("app/page.tsx")).unwrap(),
+                    "broken page"
+                );
+                Err("typecheck failed".into())
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(error, TransactionError::Validation(_)));
+        assert_eq!(
+            fs::read_to_string(gen_root.join("app/page.tsx")).unwrap(),
+            "working page"
+        );
+    }
+
+    #[test]
+    fn hand_edited_generated_file_is_not_overwritten() {
+        let dir = tempfile::tempdir().unwrap();
+        let gen_root = dir.path().join(".sayn/generated");
+        fs::create_dir_all(gen_root.join("app")).unwrap();
+        fs::write(gen_root.join("app/page.tsx"), "edited by hand").unwrap();
+        let mut manifest = Manifest::new("p", "1");
+        manifest.generated_hashes.insert(
+            ".sayn/generated/app/page.tsx".into(),
+            Manifest::compute_sha256(b"as generated"),
+        );
+
+        let error = Materializer::materialize_response(
+            dir.path(),
+            &gen_root,
+            "run-1",
+            &response(vec![create("app/page.tsx", "regenerated")]),
+            Some(&manifest),
+            |_| Ok(()),
+        )
+        .unwrap_err();
+
+        assert!(matches!(error, TransactionError::ManualEditConflict { .. }));
+        assert_eq!(
+            fs::read_to_string(gen_root.join("app/page.tsx")).unwrap(),
+            "edited by hand"
+        );
+    }
 
     #[test]
     fn test_materialize_plan_basic() {

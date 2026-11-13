@@ -1,14 +1,15 @@
-use crate::operations::{FileOperation, OperationValidator};
 use crate::repair::BoundedRepair;
 use crate::session::{ExecutionSession, SessionManager, SessionStatus};
 use crate::task::GenerationTask;
 use colored::Colorize;
+use sayn_executor::Materializer;
 use sayn_hermes_auth::NousAuthManager;
 use sayn_hermes_models::ModelCatalog;
-use sayn_ir::{GeneratedOperation, GenerationPlan};
+use sayn_ir::GenerationPlan;
 use sayn_providers::{
     GenerationProvider, GenerationRequest, NousProvider, OpenAiProvider, ProviderError,
 };
+use sayn_state::Manifest;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -28,6 +29,9 @@ pub enum ExecutorError {
     #[error("Operation error: {0}")]
     Operation(#[from] crate::operations::OperationError),
 
+    #[error("Generated files were not applied: {0}")]
+    Materialization(#[from] sayn_state::TransactionError),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -41,7 +45,8 @@ pub struct ExecutionResult {
     pub model_used: String,
     pub provider_used: String,
     pub operations_applied: usize,
-    pub repaired: bool,
+    /// Digests of all managed generated files after this run, for the manifest.
+    pub generated_hashes: std::collections::HashMap<String, String>,
 }
 
 pub struct HermesExecutor;
@@ -131,45 +136,34 @@ impl HermesExecutor {
                 other => ExecutorError::ProviderRequest(other.to_string()),
             })?;
 
-        // Confine every target before the first write, so a response with one
-        // bad path changes nothing.
-        let mut operations = Vec::new();
-        for operation in &response.operations {
-            OperationValidator::validate_path(&task.output_root, operation.path())?;
-            match operation {
-                GeneratedOperation::Create { path, content } => {
-                    operations.push(FileOperation::CreateFile {
-                        path: path.clone(),
-                        content: content.clone(),
-                    });
-                }
-                GeneratedOperation::Modify { path, content } => {
-                    operations.push(FileOperation::UpdateFile {
-                        path: path.clone(),
-                        content: content.clone(),
-                    });
-                }
-                GeneratedOperation::Delete { path } => {
-                    operations.push(FileOperation::DeleteGeneratedFile { path: path.clone() });
-                }
-                GeneratedOperation::Retain { .. } => {}
-            }
-        }
-
         println!(
             "  {} Received {} model-generated file operations",
             "✔".green(),
             response.operations.len()
         );
-        let mut applied_ops = Vec::new();
-        for operation in &operations {
-            if let Some(message) = OperationValidator::apply(&task.output_root, operation)? {
-                applied_ops.push(message);
-            }
-        }
 
-        // Bounded repair check
-        let repaired = BoundedRepair::attempt_repair(&task.output_root, 3).unwrap_or(false);
+        // Stage, validate the complete candidate, then commit. Any failure
+        // leaves the existing generated application exactly as it was.
+        let previous = Manifest::load(&task.project_root).map_err(|error| {
+            ExecutorError::Execution(format!(
+                "the generation manifest could not be read ({error}); \
+                 no files were changed"
+            ))
+        })?;
+        let report = Materializer::materialize_response(
+            &task.project_root,
+            &task.output_root,
+            &run_id,
+            &response,
+            previous.as_ref(),
+            Self::validate_candidate,
+        )?;
+        let applied_ops: Vec<String> = report
+            .written
+            .iter()
+            .map(|path| format!("Wrote {path}"))
+            .chain(report.deleted.iter().map(|path| format!("Deleted {path}")))
+            .collect();
 
         let completed_at = chrono::Utc::now().to_rfc3339();
 
@@ -196,8 +190,23 @@ impl HermesExecutor {
             model_used: active_model,
             provider_used: provider_name,
             operations_applied: applied_ops.len(),
-            repaired,
+            generated_hashes: report.generated_hashes,
         })
+    }
+
+    /// Structural checks on the candidate application before it replaces the
+    /// current one. Missing pieces are reported, never filled in.
+    fn validate_candidate(candidate: &std::path::Path) -> Result<(), String> {
+        let problems: Vec<String> = BoundedRepair::inspect_workspace(candidate)
+            .into_iter()
+            .filter(|issue| issue.severity == "error")
+            .map(|issue| issue.description)
+            .collect();
+        if problems.is_empty() {
+            Ok(())
+        } else {
+            Err(problems.join("; "))
+        }
     }
 }
 
@@ -317,39 +326,92 @@ mod tests {
         assert!(SessionManager::load_latest(dir.path()).is_none());
     }
 
+    const FULL_APP: &str = r#"{"schema_version":1,"operations":[
+        {"kind":"create","path":"package.json","content":"{\"name\":\"app\"}"},
+        {"kind":"create","path":"app/layout.tsx","content":"export default function L({children}){return children}"},
+        {"kind":"create","path":"app/page.tsx","content":"export default function Page(){ return null }"},
+        {"kind":"create","path":"app/globals.css","content":"@import \"tailwindcss\";"},
+        {"kind":"retain","path":"next.config.ts"}],"summary":"app"}"#;
+
+    fn run(dir: &std::path::Path, content: &str) -> Result<ExecutionResult, ExecutorError> {
+        let (base_url, server) = completion_server("200 OK", completion(content));
+        let (task, plan) = task_and_plan(dir);
+        let provider = provider_at(base_url);
+        let result = HermesExecutor::execute_with_provider(&task, &plan, Some(&provider));
+        server.join().unwrap();
+        result
+    }
+
     #[test]
     fn structured_response_is_written_and_recorded() {
-        let content = r#"{"schema_version":1,"operations":[{"kind":"create","path":"app/page.tsx","content":"export default function Page(){ return null }"},{"kind":"retain","path":"package.json"}],"summary":"page"}"#;
-        let (base_url, server) = completion_server("200 OK", completion(content));
         let dir = tempdir().unwrap();
-        let (task, plan) = task_and_plan(dir.path());
-        let provider = provider_at(base_url);
+        let output = dir.path().join(".sayn/generated");
 
-        let result = HermesExecutor::execute_with_provider(&task, &plan, Some(&provider)).unwrap();
-        server.join().unwrap();
+        let result = run(dir.path(), FULL_APP).unwrap();
 
-        assert_eq!(result.operations_applied, 1);
+        assert_eq!(result.operations_applied, 4);
         assert_eq!(result.model_used, "test-model");
-        assert!(task.output_root.join("app/page.tsx").exists());
+        assert!(output.join("app/page.tsx").exists());
+        assert!(
+            result
+                .generated_hashes
+                .contains_key(".sayn/generated/app/page.tsx")
+        );
         let session = SessionManager::load_latest(dir.path()).unwrap();
         assert_eq!(session.status, SessionStatus::Completed);
+        assert!(!dir.path().join(".sayn/staging/run-1").exists());
     }
 
     #[test]
     fn response_with_an_escaping_path_writes_nothing() {
         let content = r#"{"schema_version":1,"operations":[{"kind":"create","path":"app/page.tsx","content":"ok"},{"kind":"create","path":"../../escape.txt","content":"bad"}]}"#;
-        let (base_url, server) = completion_server("200 OK", completion(content));
         let dir = tempdir().unwrap();
-        let (task, plan) = task_and_plan(dir.path());
-        let provider = provider_at(base_url);
 
-        let error =
-            HermesExecutor::execute_with_provider(&task, &plan, Some(&provider)).unwrap_err();
-        server.join().unwrap();
+        let error = run(dir.path(), content).unwrap_err();
 
         assert!(matches!(error, ExecutorError::ProviderSchema(_)));
-        assert!(!task.output_root.join("app/page.tsx").exists());
+        assert!(!dir.path().join(".sayn/generated/app/page.tsx").exists());
         assert!(!dir.path().join("escape.txt").exists());
         assert!(SessionManager::load_latest(dir.path()).is_none());
+    }
+
+    #[test]
+    fn incomplete_application_is_rejected_without_canned_filler() {
+        let content = r#"{"schema_version":1,"operations":[{"kind":"create","path":"app/page.tsx","content":"export default function Page(){ return null }"}]}"#;
+        let dir = tempdir().unwrap();
+        let output = dir.path().join(".sayn/generated");
+
+        let error = run(dir.path(), content).unwrap_err();
+
+        assert!(matches!(
+            error,
+            ExecutorError::Materialization(sayn_state::TransactionError::Validation(_))
+        ));
+        assert!(!output.join("app/page.tsx").exists());
+        assert!(!output.join("app/layout.tsx").exists());
+        assert!(!output.join("package.json").exists());
+        assert!(SessionManager::load_latest(dir.path()).is_none());
+    }
+
+    #[test]
+    fn hand_edited_output_survives_a_regeneration_attempt() {
+        let dir = tempdir().unwrap();
+        let output = dir.path().join(".sayn/generated");
+        let first = run(dir.path(), FULL_APP).unwrap();
+        let mut manifest = Manifest::new("project-1", "1");
+        manifest.generated_hashes = first.generated_hashes;
+        manifest.save(dir.path()).unwrap();
+        std::fs::write(output.join("app/page.tsx"), "my hand edit").unwrap();
+
+        let error = run(dir.path(), FULL_APP).unwrap_err();
+
+        assert!(matches!(
+            error,
+            ExecutorError::Materialization(sayn_state::TransactionError::ManualEditConflict { .. })
+        ));
+        assert_eq!(
+            std::fs::read_to_string(output.join("app/page.tsx")).unwrap(),
+            "my hand edit"
+        );
     }
 }

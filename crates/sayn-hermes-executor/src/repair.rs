@@ -73,80 +73,6 @@ impl BoundedRepair {
 
         issues
     }
-
-    /// Attempt bounded repair (up to 3 iterations) for missing critical artifacts.
-    pub fn attempt_repair(gen_root: &Path, max_attempts: usize) -> Result<bool, std::io::Error> {
-        let mut attempt = 0;
-        while attempt < max_attempts {
-            attempt += 1;
-            let issues = Self::inspect_workspace(gen_root);
-            if issues.is_empty() {
-                return Ok(true);
-            }
-
-            for issue in &issues {
-                if issue.file == "app/globals.css" {
-                    let path = gen_root.join("app/globals.css");
-                    if let Some(parent) = path.parent() {
-                        fs::create_dir_all(parent)?;
-                    }
-                    fs::write(
-                        &path,
-                        "@import \"tailwindcss\";\n\n:root {\n  color-scheme: light dark;\n}\n",
-                    )?;
-                } else if issue.file == "app/layout.tsx" {
-                    let path = gen_root.join("app/layout.tsx");
-                    if let Some(parent) = path.parent() {
-                        fs::create_dir_all(parent)?;
-                    }
-                    let layout_code = r#"import type { Metadata } from 'next';
-import './globals.css';
-
-export const metadata: Metadata = {
-  title: 'Sayn Application',
-  description: 'Built with Sayn and Next.js',
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <body className="antialiased min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50">
-        {children}
-      </body>
-    </html>
-  );
-}
-"#;
-                    fs::write(&path, layout_code)?;
-                } else if issue.file == "app/page.tsx" {
-                    let path = gen_root.join("app/page.tsx");
-                    if let Some(parent) = path.parent() {
-                        fs::create_dir_all(parent)?;
-                    }
-                    let page_code = r#"export default function HomePage() {
-  return (
-    <main className="container mx-auto px-4 py-16">
-      <h1 className="text-4xl font-bold tracking-tight">Sayn Application</h1>
-      <p className="mt-4 text-neutral-600 dark:text-neutral-400">
-        Engineered with Sayn instruction compiler.
-      </p>
-    </main>
-  );
-}
-"#;
-                    fs::write(&path, page_code)?;
-                }
-            }
-        }
-
-        // Final check
-        let remaining = Self::inspect_workspace(gen_root);
-        Ok(remaining.is_empty())
-    }
 }
 
 #[cfg(test)]
@@ -155,24 +81,15 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_inspect_and_repair() {
+    fn inspection_reports_missing_artifacts_without_creating_them() {
         let dir = tempdir().unwrap();
         let root = dir.path();
-
-        // Initially empty: issues exist
-        let issues = BoundedRepair::inspect_workspace(root);
-        assert!(!issues.is_empty());
-
-        // Create package.json
         fs::write(root.join("package.json"), r#"{"name": "test"}"#).unwrap();
 
-        // Run repair
-        let fixed = BoundedRepair::attempt_repair(root, 3).unwrap();
-        assert!(fixed);
+        let issues = BoundedRepair::inspect_workspace(root);
 
-        // Check that artifacts now exist
-        assert!(root.join("app/layout.tsx").exists());
-        assert!(root.join("app/page.tsx").exists());
-        assert!(root.join("app/globals.css").exists());
+        assert!(issues.iter().any(|issue| issue.file == "app/layout.tsx"));
+        assert!(issues.iter().any(|issue| issue.file == "app/page.tsx"));
+        assert!(!root.join("app").exists());
     }
 }

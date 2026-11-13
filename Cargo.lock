@@ -1054,6 +1054,7 @@ dependencies = [
  "sayn-ir",
  "sayn-project",
  "sayn-security",
+ "sayn-state",
  "serde",
  "serde_json",
  "tempfile",

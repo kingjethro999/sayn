@@ -76,6 +76,7 @@ dist/
 # Sayn cache
 .sayn/cache/
 .sayn/checkpoints/
+.sayn/staging/
 "#;
     fs::write(destination.join(".gitignore"), gitignore_content).map_err(|e| e.to_string())?;
 

@@ -123,11 +123,11 @@
 - Consumes: validated versioned generation operations and the previous generated manifest.
 - Produces: `GenerationTransaction::stage`, `validate`, `commit`, and `abort`, plus explicit manual-edit conflicts.
 
-- [ ] **Step 1: Write failing tests** for path traversal, absolute paths, symlink escape, duplicate targets, model-requested deletion, manual-edit conflicts, mid-commit failure, and rollback.
-- [ ] **Step 2: Run the three owning crate test suites** and verify direct writes fail the transactional expectations.
-- [ ] **Step 3: Stage operations under `.sayn/staging/<run-id>`**, compare current output digests with the accepted manifest, and validate the complete candidate tree before commit.
-- [ ] **Step 4: Atomically swap eligible files and write the manifest only after success**; preserve the prior output and journal failure otherwise.
-- [ ] **Step 5: Run `cargo test -p sayn-security -p sayn-state -p sayn-executor`** and verify all transaction/security tests pass.
+- [x] **Step 1: Write failing tests** for path traversal, absolute paths, symlink escape, duplicate targets, model-requested deletion, manual-edit conflicts, mid-commit failure, and rollback.
+- [x] **Step 2: Run the three owning crate test suites** and verify direct writes fail the transactional expectations.
+- [x] **Step 3: Stage operations under `.sayn/staging/<run-id>`**, compare current output digests with the accepted manifest, and validate the complete candidate tree before commit.
+- [x] **Step 4: Atomically swap eligible files and write the manifest only after success**; preserve the prior output and journal failure otherwise.
+- [x] **Step 5: Run `cargo test -p sayn-security -p sayn-state -p sayn-executor`** and verify all transaction/security tests pass.
 
 ### Task 6: Craft Orchestration, Real Validation, and Run State
 

@@ -248,11 +248,10 @@ pub fn execute(
         let mut new_manifest =
             sayn_state::Manifest::new(&config.sayn.project_id, &config.sayn.template_version);
         new_manifest.source_hashes = current_source_hashes;
-        if let Ok(gen_hashes) = sayn_state::Manifest::scan_directory_hashes(&root, &gen_root, None)
-        {
-            new_manifest.generated_hashes = gen_hashes;
-        }
-        let _ = new_manifest.save(&root);
+        // Digests come from the committed run, not a rescan, so a later hand
+        // edit is detected as a conflict instead of being recorded as generated.
+        new_manifest.generated_hashes = exec_res.generated_hashes.clone();
+        new_manifest.save(&root)?;
     }
 
     // Save checkpoint

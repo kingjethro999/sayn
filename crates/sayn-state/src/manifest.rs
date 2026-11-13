@@ -113,7 +113,11 @@ impl Manifest {
         }
         let content = serde_json::to_string_pretty(self)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        fs::write(path, content)?;
+        // Write beside the destination, then rename, so an interrupted save
+        // never leaves a truncated manifest in place of the last good one.
+        let temporary = path.with_extension("json.tmp");
+        fs::write(&temporary, content)?;
+        fs::rename(&temporary, &path)?;
         Ok(())
     }
 }
