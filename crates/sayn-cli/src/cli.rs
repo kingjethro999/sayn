@@ -98,7 +98,13 @@ pub enum Commands {
 
     #[command(about = "Run scripts or package manager commands in the generated application")]
     App(AppArgs),
+
+    #[command(about = "Display execution history and sessions of the current project")]
+    History(HistoryArgs),
 }
+
+#[derive(Args, Debug, PartialEq)]
+pub struct HistoryArgs {}
 
 #[derive(Args, Debug, PartialEq)]
 pub struct CreateArgs {
@@ -354,6 +360,10 @@ pub struct AppArgs {
     #[arg(help = "The script to run from package.json (e.g., dev, build, start, lint)")]
     pub script: Option<String>,
 
-    #[arg(trailing_var_arg = true, allow_hyphen_values = true, help = "Additional arguments to pass to the script")]
+    #[arg(
+        trailing_var_arg = true,
+        allow_hyphen_values = true,
+        help = "Additional arguments to pass to the script"
+    )]
     pub args: Vec<String>,
 }

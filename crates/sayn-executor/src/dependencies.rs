@@ -68,7 +68,11 @@ impl DependencyManager {
 
     /// Run a script defined in the generated project's package.json.
     /// E.g. `run_script(gen_root, "dev")` runs `pnpm run dev`.
-    pub fn run_script(gen_root: &Path, script: &str, extra_args: &[String]) -> std::io::Result<bool> {
+    pub fn run_script(
+        gen_root: &Path,
+        script: &str,
+        extra_args: &[String],
+    ) -> std::io::Result<bool> {
         let pm = match Self::detect_package_manager() {
             Some(pm) => pm,
             None => return Ok(false),
@@ -94,7 +98,9 @@ impl DependencyManager {
     }
 
     /// List scripts from a package.json file.
-    pub fn list_scripts(gen_root: &Path) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
+    pub fn list_scripts(
+        gen_root: &Path,
+    ) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
         let pkg_path = gen_root.join("package.json");
         if !pkg_path.exists() {
             return Err("No package.json found in generated project".into());

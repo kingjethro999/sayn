@@ -4,7 +4,7 @@
 
 Write what your software should do in `.sayn` files. Run `sayn craft`. Sayn interprets the instructions, creates or updates a real application, validates the result, and runs it locally.
 
-> ⚠️ **Status: Early Development** — Sayn is under active initial implementation. The architecture is being established and core features are being built incrementally. Not yet suitable for production use.
+> ⚠️ **Status: Early Development** — The local language and project foundations are implemented, while provider-backed generation, transactional output safety, and cross-platform release verification are still being hardened. Sayn is not yet suitable for production use.
 
 ## What is Sayn?
 
@@ -104,14 +104,14 @@ sayn build
 | `sayn check` | ✅ Implemented | Validate .sayn instructions offline |
 | `sayn format` | ✅ Implemented | Format .sayn files deterministically |
 | `sayn plan` | ✅ Implemented | Preview generation plan |
-| `sayn craft` | ✅ Implemented | Generate application (auto check+plan) |
-| `sayn build` | 🚧 Stub | Production build |
-| `sayn doctor` | 🚧 Stub | Environment diagnostics |
-| `sayn init` | 🚧 Stub | Initialize in existing directory |
-| `sayn status` | 🚧 Stub | Show project status |
-| `sayn auth` | 🚧 Stub | Authentication |
-| `sayn provider` | 🚧 Stub | Provider management |
-| `sayn model` | 🚧 Stub | Model management |
+| `sayn craft` | 🧪 Experimental | Provider-backed generation; safety hardening in progress |
+| `sayn build` | 🧪 Experimental | Run the generated project's production build |
+| `sayn doctor` | 🧪 Experimental | Environment and runtime diagnostics |
+| `sayn init` | ✅ Implemented | Initialize instruction sources in an existing directory |
+| `sayn status` | ✅ Implemented | Show local project and run status |
+| `sayn auth` | 🧪 Experimental | Nous Portal authentication |
+| `sayn provider` | 🧪 Experimental | Inspect provider configuration |
+| `sayn model` | 🧪 Experimental | Discover and select provider models |
 
 ## Architecture
 

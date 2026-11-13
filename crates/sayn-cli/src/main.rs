@@ -36,6 +36,7 @@ fn main() {
         Commands::Logout(args) => commands::logout::execute(args),
         Commands::Provider(args) => commands::provider::execute(args),
         Commands::App(args) => commands::app::execute(args, project_opt),
+        Commands::History(args) => commands::history::execute(args, project_opt),
     };
 
     match result {
@@ -199,11 +200,14 @@ mod tests {
         let cli_model_list = Cli::try_parse_from(["sayn", "model", "list", "--free"]);
         assert!(cli_model_list.is_ok());
 
-        let cli_model_use = Cli::try_parse_from(["sayn", "model", "use", "hermes-3-llama-3.1-405b"]);
+        let cli_model_use =
+            Cli::try_parse_from(["sayn", "model", "use", "hermes-3-llama-3.1-405b"]);
         assert!(cli_model_use.is_ok());
 
         let cli_app = Cli::try_parse_from(["sayn", "app", "dev"]);
         assert!(cli_app.is_ok());
+
+        let cli_history = Cli::try_parse_from(["sayn", "history"]);
+        assert!(cli_history.is_ok());
     }
 }
-

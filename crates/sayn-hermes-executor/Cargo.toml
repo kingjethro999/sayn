@@ -1,0 +1,27 @@
+[package]
+name = "sayn-hermes-executor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+sayn-core = { path = "../sayn-core" }
+sayn-security = { path = "../sayn-security" }
+sayn-ir = { path = "../sayn-ir" }
+sayn-hermes-auth = { path = "../sayn-hermes-auth" }
+sayn-hermes-models = { path = "../sayn-hermes-models" }
+sayn-providers = { path = "../sayn-providers" }
+sayn-hermes-runtime = { path = "../sayn-hermes-runtime" }
+sayn-planner = { path = "../sayn-planner" }
+sayn-executor = { path = "../sayn-executor" }
+sayn-state = { path = "../sayn-state" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+colored = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

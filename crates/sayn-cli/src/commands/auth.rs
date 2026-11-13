@@ -2,78 +2,108 @@ use crate::cli::{AuthArgs, AuthSubcommand};
 use colored::Colorize;
 use sayn_core::ExitCode;
 use sayn_hermes_auth::{
-    DEFAULT_NOUS_CLIENT_ID, DEFAULT_NOUS_INFERENCE_URL, DEFAULT_NOUS_PORTAL_URL, DEFAULT_NOUS_SCOPE,
-    NousAuthManager, NousAuthState,
+    DEFAULT_NOUS_CLIENT_ID, DEFAULT_NOUS_INFERENCE_URL, DEFAULT_NOUS_PORTAL_URL,
+    DEFAULT_NOUS_SCOPE, NousAuthManager, NousAuthState,
 };
 use sayn_hermes_models::ModelCatalog;
 
 pub fn execute(args: &AuthArgs) -> Result<ExitCode, Box<dyn std::error::Error>> {
     match &args.action {
-        Some(AuthSubcommand::Nous { portal_url, no_browser }) => {
-            login_nous(portal_url.as_deref(), *no_browser)
-        }
+        Some(AuthSubcommand::Nous {
+            portal_url,
+            no_browser,
+        }) => login_nous(portal_url.as_deref(), *no_browser),
         Some(AuthSubcommand::Login) => {
             println!("{} Sayn Authentication\n", "✦".cyan().bold());
             println!("Choose an authentication method:");
-            println!("  1. Nous Portal (Recommended): Run '{}'", "sayn auth nous".bold());
-            println!("  2. Bring-Your-Own-Key (BYOK): Export {} or {}\n", "SAYN_API_KEY".bold(), "OPENAI_API_KEY".bold());
+            println!(
+                "  1. Nous Portal (Recommended): Run '{}'",
+                "sayn auth nous".bold()
+            );
+            println!(
+                "  2. Bring-Your-Own-Key (BYOK): Export {} or {}\n",
+                "SAYN_API_KEY".bold(),
+                "OPENAI_API_KEY".bold()
+            );
             Ok(ExitCode::Success)
         }
         Some(AuthSubcommand::Logout) => {
             NousAuthManager::clear_auth_state()?;
-            println!("{} Logged out from Nous Portal and cleared local credentials.", "✔".green().bold());
+            println!(
+                "{} Logged out from Nous Portal and cleared local credentials.",
+                "✔".green().bold()
+            );
             Ok(ExitCode::Success)
         }
-        Some(AuthSubcommand::Status) | None => {
-            print_auth_status()
-        }
-        Some(AuthSubcommand::Token) => {
-            match NousAuthManager::load_auth_state()? {
-                Some(state) => {
-                    let token = state.access_token;
-                    if token.len() > 16 {
-                        println!("Bearer {}...{}", &token[..8], &token[token.len() - 8..]);
-                    } else {
-                        println!("Bearer {}", token);
-                    }
-                    Ok(ExitCode::Success)
+        Some(AuthSubcommand::Status) | None => print_auth_status(),
+        Some(AuthSubcommand::Token) => match NousAuthManager::load_auth_state()? {
+            Some(state) => {
+                let token = state.access_token;
+                if token.len() > 16 {
+                    println!("Bearer {}...{}", &token[..8], &token[token.len() - 8..]);
+                } else {
+                    println!("Bearer {}", token);
                 }
-                None => {
-                    eprintln!("{} Not authenticated with Nous Portal.", "✖".red().bold());
-                    eprintln!("Run 'sayn auth nous' to log in.");
-                    Ok(ExitCode::GeneralError)
-                }
+                Ok(ExitCode::Success)
             }
-        }
+            None => {
+                eprintln!("{} Not authenticated with Nous Portal.", "✖".red().bold());
+                eprintln!("Run 'sayn auth nous' to log in.");
+                Ok(ExitCode::GeneralError)
+            }
+        },
     }
 }
 
-fn login_nous(portal_url: Option<&str>, no_browser: bool) -> Result<ExitCode, Box<dyn std::error::Error>> {
+fn login_nous(
+    portal_url: Option<&str>,
+    no_browser: bool,
+) -> Result<ExitCode, Box<dyn std::error::Error>> {
     println!("{} Sayn Authentication", "✦".cyan().bold());
     println!("Provider: {}\n", "Nous Portal".bold());
 
-    println!("{} Requesting device authorization from Nous Portal...", "→".blue().bold());
+    println!(
+        "{} Requesting device authorization from Nous Portal...",
+        "→".blue().bold()
+    );
     let device = match NousAuthManager::request_device_code(portal_url) {
         Ok(d) => d,
         Err(e) => {
-            eprintln!("{} Failed to connect to Nous Portal: {}", "✖".red().bold(), e);
+            eprintln!(
+                "{} Failed to connect to Nous Portal: {}",
+                "✖".red().bold(),
+                e
+            );
             return Ok(ExitCode::GeneralError);
         }
     };
 
     println!("\nTo continue authentication:");
-    println!("  1. Open: {}", device.verification_uri_complete.cyan().underline());
-    println!("  2. Verify confirmation code: {}\n", device.user_code.bold());
+    println!(
+        "  1. Open: {}",
+        device.verification_uri_complete.cyan().underline()
+    );
+    println!(
+        "  2. Verify confirmation code: {}\n",
+        device.user_code.bold()
+    );
 
     if !no_browser {
         if NousAuthManager::open_browser(&device.verification_uri_complete) {
             println!("  {} Opened browser for verification", "✔".green());
         } else {
-            println!("  {} Could not launch graphical browser — please open the link above manually.", "⚠".yellow());
+            println!(
+                "  {} Could not launch graphical browser — please open the link above manually.",
+                "⚠".yellow()
+            );
         }
     }
 
-    println!("\n{} Waiting for approval in browser (expires in {}s)...", "⏳".cyan(), device.expires_in);
+    println!(
+        "\n{} Waiting for approval in browser (expires in {}s)...",
+        "⏳".cyan(),
+        device.expires_in
+    );
 
     let token_resp = match NousAuthManager::poll_device_token(
         portal_url,
@@ -93,7 +123,9 @@ fn login_nous(portal_url: Option<&str>, no_browser: bool) -> Result<ExitCode, Bo
         }
     };
 
-    let portal = portal_url.unwrap_or(DEFAULT_NOUS_PORTAL_URL).trim_end_matches('/');
+    let portal = portal_url
+        .unwrap_or(DEFAULT_NOUS_PORTAL_URL)
+        .trim_end_matches('/');
     let inference = token_resp
         .inference_base_url
         .unwrap_or_else(|| DEFAULT_NOUS_INFERENCE_URL.to_string());
@@ -105,7 +137,9 @@ fn login_nous(portal_url: Option<&str>, no_browser: bool) -> Result<ExitCode, Bo
         portal_base_url: portal.to_string(),
         inference_base_url: inference.clone(),
         client_id: DEFAULT_NOUS_CLIENT_ID.to_string(),
-        scope: token_resp.scope.unwrap_or_else(|| DEFAULT_NOUS_SCOPE.to_string()),
+        scope: token_resp
+            .scope
+            .unwrap_or_else(|| DEFAULT_NOUS_SCOPE.to_string()),
         token_type: token_resp.token_type,
         access_token: token_resp.access_token,
         refresh_token: token_resp.refresh_token,
@@ -122,13 +156,29 @@ fn login_nous(portal_url: Option<&str>, no_browser: bool) -> Result<ExitCode, Bo
     println!("  Inference API:  {}", inference.dimmed());
 
     // Verify model availability
-    println!("\n{} Verifying account model eligibility...", "→".blue().bold());
-    let models = ModelCatalog::fetch_models(true).unwrap_or_else(|_| ModelCatalog::curated_models());
-    println!("  {} Found {} accessible model(s)", "✔".green(), models.len());
+    println!(
+        "\n{} Verifying account model eligibility...",
+        "→".blue().bold()
+    );
+    let models = match ModelCatalog::fetch_models(true) {
+        Ok(models) => models,
+        Err(error) => {
+            eprintln!(
+                "  {} Authentication succeeded, but model discovery failed: {}",
+                "✖".red(),
+                error
+            );
+            return Ok(ExitCode::GenerationError);
+        }
+    };
+    println!("  {} Found {} entitled model(s)", "✔".green(), models.len());
 
     let active_model = ModelCatalog::get_active_model();
     println!("  Active model:   {}", active_model.cyan().bold());
-    println!("\n{} Sayn is ready to craft applications with Nous/Hermes!", "✦".cyan().bold());
+    println!(
+        "\n{} Sayn is ready to craft applications with Nous/Hermes!",
+        "✦".cyan().bold()
+    );
 
     Ok(ExitCode::Success)
 }
@@ -139,7 +189,9 @@ fn print_auth_status() -> Result<ExitCode, Box<dyn std::error::Error>> {
     if let Some(state) = NousAuthManager::load_auth_state()? {
         let is_exp = state.is_expired();
         let status_str = if is_exp {
-            "Token Expired (will refresh on next request)".yellow().bold()
+            "Token Expired (will refresh on next request)"
+                .yellow()
+                .bold()
         } else {
             "Authenticated & Active".green().bold()
         };
@@ -150,14 +202,23 @@ fn print_auth_status() -> Result<ExitCode, Box<dyn std::error::Error>> {
         println!("  Inference API: {}", state.inference_base_url);
         println!("  Scope:         {}", state.scope);
         println!("  Expires:       {}", state.expires_at);
-        println!("  Active Model:  {}", ModelCatalog::get_active_model().cyan().bold());
+        println!(
+            "  Active Model:  {}",
+            ModelCatalog::get_active_model().cyan().bold()
+        );
         return Ok(ExitCode::Success);
     }
 
     if std::env::var("SAYN_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok() {
         println!("  Provider:      {}", "Bring-Your-Own-Key (BYOK)".bold());
-        println!("  Status:        {}", "Configured via environment variable".green());
-        println!("  Active Model:  {}", ModelCatalog::get_active_model().cyan().bold());
+        println!(
+            "  Status:        {}",
+            "Configured via environment variable".green()
+        );
+        println!(
+            "  Active Model:  {}",
+            ModelCatalog::get_active_model().cyan().bold()
+        );
         return Ok(ExitCode::Success);
     }
 

@@ -4,15 +4,15 @@ use sayn_source::SourceDocument;
 pub struct PromptBuilder;
 
 impl PromptBuilder {
-    pub fn build_generation_prompt(
-        config: &ProjectConfig,
-        docs: &[SourceDocument],
-    ) -> String {
+    pub fn build_generation_prompt(config: &ProjectConfig, docs: &[SourceDocument]) -> String {
         let mut prompt = String::new();
 
         prompt.push_str("# Sayn Compiler Generation Specification\n\n");
         prompt.push_str(&format!("Project Name: {}\n", config.sayn.name));
-        prompt.push_str(&format!("Target Framework: {} ({})\n\n", config.sayn.target, config.web.framework));
+        prompt.push_str(&format!(
+            "Target Framework: {} ({})\n\n",
+            config.sayn.target, config.web.framework
+        ));
 
         prompt.push_str("## Core Invariants\n");
         prompt.push_str("- Generate real, accessible, responsive TypeScript React components for Next.js App Router.\n");
@@ -42,7 +42,10 @@ impl PromptBuilder {
 
         for line in lines {
             let lower = line.to_lowercase();
-            if lower.contains("api_key") || lower.contains("secret_key") || lower.contains("private_key") {
+            if lower.contains("api_key")
+                || lower.contains("secret_key")
+                || lower.contains("private_key")
+            {
                 sanitized.push("[REDACTED: potential secret parameter]");
             } else {
                 sanitized.push(line);

@@ -126,7 +126,11 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 "#;
-        safe_write_file(gen_root, Path::new("next.config.ts"), next_config.as_bytes())?;
+        safe_write_file(
+            gen_root,
+            Path::new("next.config.ts"),
+            next_config.as_bytes(),
+        )?;
         Ok(1)
     }
 
@@ -140,14 +144,22 @@ const config = {
 
 export default config;
 "#;
-        safe_write_file(gen_root, Path::new("postcss.config.mjs"), postcss.as_bytes())?;
+        safe_write_file(
+            gen_root,
+            Path::new("postcss.config.mjs"),
+            postcss.as_bytes(),
+        )?;
         Ok(1)
     }
 
     fn write_globals_css(gen_root: &Path) -> Result<usize, Box<dyn std::error::Error>> {
         let globals_css = r#"@import "tailwindcss";
 "#;
-        safe_write_file(gen_root, Path::new("app/globals.css"), globals_css.as_bytes())?;
+        safe_write_file(
+            gen_root,
+            Path::new("app/globals.css"),
+            globals_css.as_bytes(),
+        )?;
         Ok(1)
     }
 
@@ -374,13 +386,11 @@ mod tests {
             target: Target::Web,
             framework: Framework::NextJs,
             instructions_count: 1,
-            routes: vec![
-                RoutePlan {
-                    route: "/".into(),
-                    source_instruction: "app/page.sayn".into(),
-                    target_file: "app/page.tsx".into(),
-                },
-            ],
+            routes: vec![RoutePlan {
+                route: "/".into(),
+                source_instruction: "app/page.sayn".into(),
+                target_file: "app/page.tsx".into(),
+            }],
             components: vec![ComponentPlan {
                 name: "Navbar".into(),
                 description: "Top navigation".into(),

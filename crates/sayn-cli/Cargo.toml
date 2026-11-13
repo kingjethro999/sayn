@@ -24,6 +24,7 @@ sayn-executor = { path = "../sayn-executor" }
 sayn-hermes-auth = { path = "../sayn-hermes-auth" }
 sayn-hermes-models = { path = "../sayn-hermes-models" }
 sayn-hermes-runtime = { path = "../sayn-hermes-runtime" }
+sayn-hermes-executor = { path = "../sayn-hermes-executor" }
 clap.workspace = true
 colored.workspace = true
 anyhow.workspace = true
@@ -32,3 +33,4 @@ serde_json.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 chrono.workspace = true
+uuid.workspace = true

@@ -10,10 +10,7 @@ pub struct RequirementAnalysis {
     pub warnings: Vec<String>,
 }
 
-pub fn analyze_requirements(
-    _root: &Path,
-    docs: &[SourceDocument],
-) -> RequirementAnalysis {
+pub fn analyze_requirements(_root: &Path, docs: &[SourceDocument]) -> RequirementAnalysis {
     let mut routes = Vec::new();
     let mut components = Vec::new();
     let mut dependencies = Vec::new();
@@ -97,7 +94,10 @@ pub fn analyze_requirements(
                 routes.push(RoutePlan {
                     route: value.clone(),
                     source_instruction: doc.file_path.clone(),
-                    target_file: PathBuf::from(format!("app{}/page.tsx", if value == "/" { "" } else { value })),
+                    target_file: PathBuf::from(format!(
+                        "app{}/page.tsx",
+                        if value == "/" { "" } else { value }
+                    )),
                 });
                 doc_has_route = true;
             }
@@ -105,7 +105,11 @@ pub fn analyze_requirements(
 
         if !doc_has_route {
             // Default route based on filename
-            let file_stem = doc.file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("page");
+            let file_stem = doc
+                .file_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("page");
             let route_name = if file_stem == "page" || file_stem == "index" {
                 "/".to_string()
             } else {
@@ -115,7 +119,10 @@ pub fn analyze_requirements(
             routes.push(RoutePlan {
                 route: route_name.clone(),
                 source_instruction: doc.file_path.clone(),
-                target_file: PathBuf::from(format!("app{}/page.tsx", if route_name == "/" { "" } else { &route_name })),
+                target_file: PathBuf::from(format!(
+                    "app{}/page.tsx",
+                    if route_name == "/" { "" } else { &route_name }
+                )),
             });
         }
 
@@ -140,7 +147,11 @@ pub fn analyze_requirements(
                     .filter(|c| c.is_alphanumeric())
                     .collect::<String>();
 
-                if !valid_name.is_empty() && !components.iter().any(|c: &ComponentPlan| c.name == valid_name) {
+                if !valid_name.is_empty()
+                    && !components
+                        .iter()
+                        .any(|c: &ComponentPlan| c.name == valid_name)
+                {
                     components.push(ComponentPlan {
                         name: valid_name.clone(),
                         description: format!("Component derived from section '{}'", heading_clean),
@@ -152,7 +163,10 @@ pub fn analyze_requirements(
     }
 
     // Default primary components if not explicitly named
-    if !components.iter().any(|c| c.name.to_lowercase().contains("nav")) {
+    if !components
+        .iter()
+        .any(|c| c.name.to_lowercase().contains("nav"))
+    {
         components.push(ComponentPlan {
             name: "Navbar".into(),
             description: "Responsive top navigation bar".into(),
@@ -160,7 +174,11 @@ pub fn analyze_requirements(
         });
     }
 
-    if has_contact_form && !components.iter().any(|c| c.name.to_lowercase().contains("contact")) {
+    if has_contact_form
+        && !components
+            .iter()
+            .any(|c| c.name.to_lowercase().contains("contact"))
+    {
         components.push(ComponentPlan {
             name: "ContactForm".into(),
             description: "Interactive validated contact form".into(),
@@ -168,7 +186,11 @@ pub fn analyze_requirements(
         });
     }
 
-    if has_dark_mode && !components.iter().any(|c| c.name.to_lowercase().contains("theme")) {
+    if has_dark_mode
+        && !components
+            .iter()
+            .any(|c| c.name.to_lowercase().contains("theme"))
+    {
         components.push(ComponentPlan {
             name: "ThemeToggle".into(),
             description: "Dark and light theme toggle button".into(),

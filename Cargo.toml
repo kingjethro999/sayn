@@ -15,6 +15,7 @@ members = [
     "crates/sayn-hermes-auth",
     "crates/sayn-hermes-models",
     "crates/sayn-hermes-runtime",
+    "crates/sayn-hermes-executor",
 ]
 
 [workspace.package]

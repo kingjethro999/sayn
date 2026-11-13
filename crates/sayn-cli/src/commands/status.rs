@@ -34,11 +34,26 @@ pub fn execute(
         }
     };
 
+    let active_model = sayn_hermes_models::ModelCatalog::get_active_model();
+    let is_nous_auth = sayn_hermes_auth::NousAuthManager::load_auth_state()
+        .ok()
+        .flatten()
+        .is_some();
+    let provider_name = if is_nous_auth {
+        "Nous Portal (Authenticated)"
+    } else if std::env::var("SAYN_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok() {
+        "BYOK (Environment key)"
+    } else {
+        "Not configured"
+    };
+
     println!("{} Sayn Project Status", "✦".cyan().bold());
     println!("  Name:       {}", config.sayn.name.bold());
     println!("  Project ID: {}", config.sayn.project_id.dimmed());
     println!("  Target:     {}", config.sayn.target);
     println!("  Framework:  {}", config.web.framework);
+    println!("  Provider:   {}", provider_name.dimmed());
+    println!("  Model:      {}", active_model.cyan());
     println!("  Root:       {}", root.display());
 
     let files = discover_sayn_files(&root, &config.source.roots);
@@ -66,6 +81,14 @@ pub fn execute(
             "  Status:     {}",
             "Not generated yet (run 'sayn craft')".yellow()
         );
+    }
+
+    if let Some(session) = sayn_hermes_executor::SessionManager::load_latest(&root) {
+        println!("\nLatest Execution Session:");
+        println!("  Run ID:     {}", session.run_id.dimmed());
+        println!("  Model:      {}", session.model.cyan());
+        println!("  Timestamp:  {}", session.started_at);
+        println!("  Operations: {}", session.operations_count);
     }
 
     Ok(ExitCode::Success)

@@ -1,7 +1,6 @@
 use crate::cli::CraftArgs;
 use colored::Colorize;
 use sayn_core::{ExitCode, Severity};
-use sayn_executor::Materializer;
 use sayn_planner::build_generation_plan;
 use sayn_project::{ProjectConfig, find_project_root};
 use sayn_source::{discover_sayn_files, parse_sayn_source, validate_document};
@@ -106,18 +105,46 @@ pub fn execute(
         plan.framework.to_string().cyan()
     );
     let active_model = sayn_hermes_models::ModelCatalog::get_active_model();
-    let is_nous_auth = sayn_hermes_auth::NousAuthManager::load_auth_state().ok().flatten().is_some();
+    let is_nous_auth = sayn_hermes_auth::NousAuthManager::load_auth_state()
+        .ok()
+        .flatten()
+        .is_some();
     let provider_name = if is_nous_auth {
         "Nous Portal (Authenticated)"
     } else if std::env::var("SAYN_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok() {
         "BYOK (Environment key)"
     } else {
-        "Integrated Engine"
+        "Not configured"
     };
-    println!("  Model:      {} ({})", active_model.cyan(), provider_name.dimmed());
+    println!(
+        "  Model:      {} ({})",
+        active_model.cyan(),
+        provider_name.dimmed()
+    );
     println!("  Routes:     {}", plan.routes.len());
     println!("  Components: {}", plan.components.len());
     println!("  Output:     {}", config.output.root.display());
+
+    if is_nous_auth {
+        let entitled_models = match sayn_hermes_models::ModelCatalog::fetch_models(false) {
+            Ok(models) => models,
+            Err(error) => {
+                eprintln!(
+                    "{} Could not load entitled Nous models: {}",
+                    "✖".red(),
+                    error
+                );
+                return Ok(ExitCode::GenerationError);
+            }
+        };
+        if let Err(error) =
+            sayn_hermes_models::ModelCatalog::validate_selection(&active_model, &entitled_models)
+        {
+            eprintln!("{} {}", "✖".red(), error);
+            eprintln!("Run 'sayn model list' and 'sayn model use <model-id>'.");
+            return Ok(ExitCode::GenerationError);
+        }
+    }
     println!("  {} Plan generated", "✔".green());
 
     if args.dry_run {
@@ -163,13 +190,58 @@ pub fn execute(
             gen_root.display()
         );
     } else {
-        // Materialize using sayn-executor
-        let files_count = Materializer::materialize_plan(&gen_root, &plan)?;
+        // Construct Hermes GenerationTask
+        let run_id = if args.action.as_deref() == Some("resume") {
+            sayn_hermes_executor::SessionManager::load_latest(&root)
+                .map(|s| s.run_id)
+                .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+        } else {
+            uuid::Uuid::new_v4().to_string()
+        };
+
+        let mut task_instructions = Vec::new();
+        for f in &files {
+            let content = fs::read_to_string(f).unwrap_or_default();
+            let rel = f
+                .strip_prefix(&root)
+                .unwrap_or(f)
+                .to_string_lossy()
+                .to_string();
+            task_instructions.push(sayn_hermes_executor::TaskInstruction {
+                file_path: rel,
+                raw_content: content,
+                title: None,
+                summary: None,
+            });
+        }
+
+        let task = sayn_hermes_executor::GenerationTask {
+            project_id: config.sayn.project_id.clone(),
+            run_id,
+            project_root: root.clone(),
+            output_root: gen_root.clone(),
+            target: config.sayn.target.to_string(),
+            framework: config.web.framework.to_string(),
+            model: active_model.clone(),
+            provider: provider_name.to_string(),
+            instructions: task_instructions,
+            routes: plan.routes.iter().map(|r| r.route.clone()).collect(),
+            components: plan.components.iter().map(|c| c.name.clone()).collect(),
+            dependencies: plan.dependencies.iter().map(|d| d.name.clone()).collect(),
+            styling_guidelines: vec!["Tailwind CSS v4".into()],
+            constraints: vec!["TypeScript".into(), "Next.js App Router".into()],
+            existing_files: Vec::new(),
+            source_hashes: current_source_hashes.clone(),
+        };
+
+        let exec_res = sayn_hermes_executor::HermesExecutor::execute(&task, &plan)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+
         println!(
-            "  {} Materialized {} Next.js artifacts in {}",
+            "  {} Hermes execution finished: {} operations applied (run: {})",
             "✔".green(),
-            files_count,
-            gen_root.display()
+            exec_res.operations_applied,
+            exec_res.run_id.dimmed()
         );
 
         // Update and save manifest
@@ -256,7 +328,10 @@ pub fn execute(
         println!("  {}", "sayn app dev".bold());
     } else {
         println!("\n{} Starting development server...", "✦".cyan().bold());
-        println!("  You can also run custom scripts with: {}\n", "sayn app <script>".bold());
+        println!(
+            "  You can also run custom scripts with: {}\n",
+            "sayn app <script>".bold()
+        );
         let _ = sayn_executor::DevServerManager::start_dev_server(&gen_root, 3000);
     }
 

@@ -154,7 +154,14 @@ impl RuntimeManager {
         }
 
         // Install core Hermes dependencies
-        let deps = ["ruamel.yaml", "httpx", "rich", "tenacity", "python-dotenv", "openai"];
+        let deps = [
+            "ruamel.yaml",
+            "httpx",
+            "rich",
+            "tenacity",
+            "python-dotenv",
+            "openai",
+        ];
         let mut cmd = Command::new(&pip);
         cmd.arg("install");
         for d in deps {
@@ -238,7 +245,11 @@ impl HermesRpcClient {
     }
 
     /// Send a request and wait for the response.
-    pub fn call(&mut self, method: &str, params: serde_json::Value) -> Result<serde_json::Value, RuntimeError> {
+    pub fn call(
+        &mut self,
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value, RuntimeError> {
         let id = self.request_id;
         self.request_id += 1;
 

@@ -19,15 +19,38 @@ pub fn execute(args: &ProviderArgs) -> Result<ExitCode, Box<dyn std::error::Erro
                 _ => "Not connected (run 'sayn auth nous')".dimmed(),
             };
             println!("  * {:<16} {}", "nous".bold(), nous_status);
-            println!("    {:<16} {}", "byok".normal(), "Bring-Your-Own-Key via environment variables".dimmed());
-            println!("    {:<16} {}", "openai".normal(), "OpenAI direct API key".dimmed());
-            println!("    {:<16} {}", "anthropic".normal(), "Anthropic Claude direct API key".dimmed());
-            println!("    {:<16} {}", "openrouter".normal(), "OpenRouter unified routing".dimmed());
-            println!("    {:<16} {}", "ollama".normal(), "Local Ollama models".dimmed());
+            println!(
+                "    {:<16} {}",
+                "byok".normal(),
+                "Bring-Your-Own-Key via environment variables".dimmed()
+            );
+            println!(
+                "    {:<16} {}",
+                "openai".normal(),
+                "OpenAI direct API key".dimmed()
+            );
+            println!(
+                "    {:<16} {}",
+                "anthropic".normal(),
+                "Anthropic Claude direct API key".dimmed()
+            );
+            println!(
+                "    {:<16} {}",
+                "openrouter".normal(),
+                "OpenRouter unified routing".dimmed()
+            );
+            println!(
+                "    {:<16} {}",
+                "ollama".normal(),
+                "Local Ollama models".dimmed()
+            );
 
             let active_model = ModelCatalog::get_active_model();
             println!("\nActive inference model: {}", active_model.cyan().bold());
-            println!("Switch active provider with: {}", "sayn provider use <name>".bold());
+            println!(
+                "Switch active provider with: {}",
+                "sayn provider use <name>".bold()
+            );
         }
         Some(ProviderSubcommand::Add { name }) => {
             let provider_name = name.as_deref().unwrap_or("custom");
@@ -43,15 +66,29 @@ pub fn execute(args: &ProviderArgs) -> Result<ExitCode, Box<dyn std::error::Erro
             if provider_name == "nous" {
                 match NousAuthManager::load_auth_state()? {
                     Some(_) => {
-                        println!("{} Active provider set to: {}", "✔".green().bold(), "nous (Nous Portal)".bold());
+                        println!(
+                            "{} Active provider set to: {}",
+                            "✔".green().bold(),
+                            "nous (Nous Portal)".bold()
+                        );
                     }
                     None => {
-                        println!("{} Selected provider 'nous', but account is not authenticated.", "⚠".yellow().bold());
-                        println!("  Run '{}' to log in with your Nous account.", "sayn auth nous".bold());
+                        println!(
+                            "{} Selected provider 'nous', but account is not authenticated.",
+                            "⚠".yellow().bold()
+                        );
+                        println!(
+                            "  Run '{}' to log in with your Nous account.",
+                            "sayn auth nous".bold()
+                        );
                     }
                 }
             } else {
-                println!("{} Active provider set to: {}", "✔".green().bold(), provider_name.bold());
+                println!(
+                    "{} Active provider set to: {}",
+                    "✔".green().bold(),
+                    provider_name.bold()
+                );
             }
         }
         Some(ProviderSubcommand::Test { name }) => {
@@ -61,10 +98,17 @@ pub fn execute(args: &ProviderArgs) -> Result<ExitCode, Box<dyn std::error::Erro
                     Some(_) => {
                         println!("{} Testing Nous Portal connection...", "→".blue().bold());
                         let models = ModelCatalog::fetch_models(false)?;
-                        println!("  {} Successfully connected to Nous Portal ({} models available).", "✔".green().bold(), models.len());
+                        println!(
+                            "  {} Successfully connected to Nous Portal ({} models available).",
+                            "✔".green().bold(),
+                            models.len()
+                        );
                     }
                     None => {
-                        println!("{} Nous Portal is not configured. Run 'sayn auth nous'.", "✖".red().bold());
+                        println!(
+                            "{} Nous Portal is not configured. Run 'sayn auth nous'.",
+                            "✖".red().bold()
+                        );
                     }
                 }
             } else {

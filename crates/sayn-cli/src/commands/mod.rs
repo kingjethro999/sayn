@@ -11,6 +11,7 @@ pub mod doctor;
 pub mod export;
 pub mod fix;
 pub mod format;
+pub mod history;
 pub mod init;
 pub mod logout;
 pub mod model;

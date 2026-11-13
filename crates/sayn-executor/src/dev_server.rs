@@ -20,12 +20,8 @@ impl DevServerManager {
     }
 
     /// Start the Next.js dev server using the detected package manager.
-    pub fn start_dev_server(
-        gen_root: &Path,
-        port: u16,
-    ) -> std::io::Result<Child> {
-        let pm = DependencyManager::detect_package_manager()
-            .unwrap_or("pnpm");
+    pub fn start_dev_server(gen_root: &Path, port: u16) -> std::io::Result<Child> {
+        let pm = DependencyManager::detect_package_manager().unwrap_or("pnpm");
 
         Command::new(pm)
             .arg("run")
