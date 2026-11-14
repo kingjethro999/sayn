@@ -16,8 +16,6 @@ __pycache__/
 *.py[cod]
 
 # Environment and secrets
-.env
-.env.*
 !.env.example
 *.pem
 *.key
@@ -46,3 +44,4 @@ AGENTS.md
 CLAUDE.md
 .versionrule.gitignore
 branch_structure.json
+config.bat
