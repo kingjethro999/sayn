@@ -191,14 +191,12 @@ impl ModelCatalog {
     /// Retrieve the currently selected model ID.
     pub fn get_active_model() -> String {
         let path = Self::model_file_path();
-        if path.exists() {
-            if let Ok(content) = fs::read_to_string(&path) {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-                    if let Some(m) = json.get("active_model").and_then(|m| m.as_str()) {
-                        return m.to_string();
-                    }
-                }
-            }
+        if path.exists()
+            && let Ok(content) = fs::read_to_string(&path)
+            && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content)
+            && let Some(m) = json.get("active_model").and_then(|m| m.as_str())
+        {
+            return m.to_string();
         }
 
         // Check environment variable

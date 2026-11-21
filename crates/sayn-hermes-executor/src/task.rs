@@ -61,7 +61,7 @@ impl GenerationTask {
             for r in &self.routes {
                 prompt.push_str(&format!("- {}\n", r));
             }
-            prompt.push_str("\n");
+            prompt.push('\n');
         }
 
         if !self.components.is_empty() {
@@ -69,7 +69,7 @@ impl GenerationTask {
             for c in &self.components {
                 prompt.push_str(&format!("- {}\n", c));
             }
-            prompt.push_str("\n");
+            prompt.push('\n');
         }
 
         if !self.constraints.is_empty() {
@@ -77,7 +77,7 @@ impl GenerationTask {
             for c in &self.constraints {
                 prompt.push_str(&format!("- {}\n", c));
             }
-            prompt.push_str("\n");
+            prompt.push('\n');
         }
 
         prompt.push_str("## Output Format\n");

@@ -90,25 +90,25 @@ impl RuntimeManager {
     pub fn detect_host_python() -> Result<(String, String), RuntimeError> {
         let candidates = ["python3", "python"];
         for cmd in candidates {
-            if let Ok(output) = Command::new(cmd).arg("--version").output() {
-                if output.status.success() {
-                    let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                    let ver_text = if text.is_empty() {
-                        String::from_utf8_lossy(&output.stderr).trim().to_string()
-                    } else {
-                        text
-                    };
+            if let Ok(output) = Command::new(cmd).arg("--version").output()
+                && output.status.success()
+            {
+                let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                let ver_text = if text.is_empty() {
+                    String::from_utf8_lossy(&output.stderr).trim().to_string()
+                } else {
+                    text
+                };
 
-                    // Check version number (e.g. "Python 3.12.3")
-                    if ver_text.contains("3.11")
-                        || ver_text.contains("3.12")
-                        || ver_text.contains("3.13")
-                        || ver_text.contains("3.14")
-                    {
-                        return Ok((cmd.to_string(), ver_text));
-                    } else {
-                        return Err(RuntimeError::PythonIncompatible(ver_text));
-                    }
+                // Check version number (e.g. "Python 3.12.3")
+                if ver_text.contains("3.11")
+                    || ver_text.contains("3.12")
+                    || ver_text.contains("3.13")
+                    || ver_text.contains("3.14")
+                {
+                    return Ok((cmd.to_string(), ver_text));
+                } else {
+                    return Err(RuntimeError::PythonIncompatible(ver_text));
                 }
             }
         }

@@ -1007,7 +1007,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-cli"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1037,7 +1037,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-core"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "chrono",
  "serde",
@@ -1048,7 +1048,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-executor"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "sayn-core",
@@ -1064,7 +1064,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-formatter"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "sayn-core",
  "sayn-source",
@@ -1074,7 +1074,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-hermes-auth"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1089,7 +1089,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-hermes-executor"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "chrono",
  "colored",
@@ -1112,7 +1112,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-hermes-models"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1128,7 +1128,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-hermes-runtime"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "colored",
@@ -1143,7 +1143,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-ir"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "sayn-core",
  "serde",
@@ -1153,7 +1153,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-planner"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "sayn-core",
@@ -1169,7 +1169,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-project"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "sayn-core",
  "sayn-ir",
@@ -1186,7 +1186,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-providers"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "reqwest",
@@ -1199,7 +1199,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-security"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "sayn-core",
  "serde",
@@ -1209,7 +1209,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-source"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "hex",
  "sayn-core",
@@ -1223,7 +1223,7 @@ dependencies = [
 
 [[package]]
 name = "sayn-state"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "chrono",
  "hex",

@@ -178,7 +178,7 @@ impl NousAuthManager {
             .timeout(Duration::from_secs(15))
             .build()?;
 
-        let effective_interval = interval.max(1).min(30);
+        let effective_interval = interval.clamp(1, 30);
         let start = Instant::now();
         let timeout_dur = Duration::from_secs(expires_in.max(30));
 
@@ -330,49 +330,44 @@ impl NousAuthManager {
         }
 
         // Upstream fallback: check ~/.hermes/auth.json
-        if hermes_path.exists() {
-            if let Ok(content) = fs::read_to_string(hermes_path) {
-                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
-                    if let Some(nous) = val.get("providers").and_then(|p| p.get("nous")) {
-                        if let Some(access_token) =
-                            nous.get("access_token").and_then(|t| t.as_str())
-                        {
-                            let portal = nous
-                                .get("portal_base_url")
-                                .and_then(|p| p.as_str())
-                                .unwrap_or(DEFAULT_NOUS_PORTAL_URL);
-                            let inference = nous
-                                .get("inference_base_url")
-                                .and_then(|p| p.as_str())
-                                .unwrap_or(DEFAULT_NOUS_INFERENCE_URL);
-                            let refresh = nous
-                                .get("refresh_token")
-                                .and_then(|r| r.as_str())
-                                .map(|s| s.to_string());
-                            let expires_in = nous
-                                .get("expires_in")
-                                .and_then(|e| e.as_u64())
-                                .unwrap_or(3600);
-                            let now = chrono::Utc::now();
-                            let exp = now + chrono::Duration::seconds(expires_in as i64);
+        if hermes_path.exists()
+            && let Ok(content) = fs::read_to_string(hermes_path)
+            && let Ok(val) = serde_json::from_str::<serde_json::Value>(&content)
+            && let Some(nous) = val.get("providers").and_then(|p| p.get("nous"))
+            && let Some(access_token) = nous.get("access_token").and_then(|t| t.as_str())
+        {
+            let portal = nous
+                .get("portal_base_url")
+                .and_then(|p| p.as_str())
+                .unwrap_or(DEFAULT_NOUS_PORTAL_URL);
+            let inference = nous
+                .get("inference_base_url")
+                .and_then(|p| p.as_str())
+                .unwrap_or(DEFAULT_NOUS_INFERENCE_URL);
+            let refresh = nous
+                .get("refresh_token")
+                .and_then(|r| r.as_str())
+                .map(|s| s.to_string());
+            let expires_in = nous
+                .get("expires_in")
+                .and_then(|e| e.as_u64())
+                .unwrap_or(3600);
+            let now = chrono::Utc::now();
+            let exp = now + chrono::Duration::seconds(expires_in as i64);
 
-                            return Ok(Some(NousAuthState {
-                                portal_base_url: portal.to_string(),
-                                inference_base_url: inference.to_string(),
-                                client_id: DEFAULT_NOUS_CLIENT_ID.to_string(),
-                                scope: DEFAULT_NOUS_SCOPE.to_string(),
-                                token_type: "Bearer".to_string(),
-                                access_token: access_token.to_string(),
-                                refresh_token: refresh,
-                                obtained_at: now.to_rfc3339(),
-                                expires_at: exp.to_rfc3339(),
-                                expires_in,
-                                free_tier: false,
-                            }));
-                        }
-                    }
-                }
-            }
+            return Ok(Some(NousAuthState {
+                portal_base_url: portal.to_string(),
+                inference_base_url: inference.to_string(),
+                client_id: DEFAULT_NOUS_CLIENT_ID.to_string(),
+                scope: DEFAULT_NOUS_SCOPE.to_string(),
+                token_type: "Bearer".to_string(),
+                access_token: access_token.to_string(),
+                refresh_token: refresh,
+                obtained_at: now.to_rfc3339(),
+                expires_at: exp.to_rfc3339(),
+                expires_in,
+                free_tier: false,
+            }));
         }
 
         Ok(None)
